@@ -1,0 +1,952 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Gate Check — Airport Rankings</title>
+<meta name="description" content="One frequent flyer's ongoing, data-driven rankings of every airport he's passed through.">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🛫</text></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700;800&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --navy-950: #0e1620;
+  --navy-900: #131d2b;
+  --navy-800: #1a2738;
+  --navy-700: #24344a;
+  --navy-600: #33465f;
+  --amber: #ffb703;
+  --amber-dim: #c98a02;
+  --teal: #5eead4;
+  --coral: #fb7185;
+  --cream: #eef1f6;
+  --slate: #93a1b5;
+  --slate-dim: #5c6c82;
+
+  --font-display: "Space Mono", monospace;
+  --font-body: "Archivo", sans-serif;
+}
+
+* { box-sizing: border-box; }
+
+html { color-scheme: dark; }
+
+body {
+  margin: 0;
+  background: var(--navy-950);
+  color: var(--cream);
+  font-family: var(--font-body);
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+
+.wrap {
+  max-width: 880px;
+  margin: 0 auto;
+  padding: 0 24px;
+}
+
+a { color: var(--teal); }
+
+.grain {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  opacity: 0.035;
+  background-image: radial-gradient(circle at 1px 1px, #fff 1px, transparent 0);
+  background-size: 22px 22px;
+}
+
+.site-header {
+  padding: 48px 0 28px;
+  border-bottom: 1px solid var(--navy-700);
+}
+
+.brand {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+}
+
+.brand-mark {
+  font-size: 22px;
+  color: var(--amber);
+  transform: rotate(-8deg);
+  display: inline-block;
+}
+
+.brand-name {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 26px;
+  letter-spacing: 0.02em;
+}
+
+.tagline {
+  margin: 10px 0 0;
+  max-width: 46ch;
+  color: var(--slate);
+  font-size: 15px;
+}
+
+.hero {
+  padding: 56px 0 40px;
+  text-align: center;
+  border-bottom: 1px solid var(--navy-700);
+}
+
+.hero-label {
+  margin: 0 0 18px;
+  color: var(--amber);
+  font-family: var(--font-display);
+  font-size: 13px;
+  letter-spacing: 0.12em;
+}
+
+.flap-display {
+  display: flex;
+  justify-content: center;
+  gap: 6px;
+  perspective: 400px;
+}
+
+.flap-char {
+  display: inline-block;
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: clamp(48px, 12vw, 84px);
+  line-height: 1;
+  background: var(--navy-800);
+  border: 1px solid var(--navy-600);
+  border-radius: 6px;
+  padding: 8px 6px 4px;
+  min-width: 0.9em;
+  color: var(--cream);
+  box-shadow: 0 1px 0 rgba(255,255,255,0.05) inset, 0 6px 18px rgba(0,0,0,0.35);
+  transform-origin: 50% 100%;
+  animation: flip-in 0.5s ease-out backwards;
+}
+
+@keyframes flip-in {
+  from { transform: rotateX(-90deg); opacity: 0; }
+  to { transform: rotateX(0deg); opacity: 1; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .flap-char { animation: none; }
+}
+
+.flap-loading {
+  font-family: var(--font-display);
+  color: var(--slate);
+  font-size: 20px;
+  letter-spacing: 0.08em;
+}
+
+.hero-name {
+  margin: 22px 0 0;
+  color: var(--slate);
+  font-size: 16px;
+}
+
+.stats-strip {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1px;
+  background: var(--navy-700);
+  border-bottom: 1px solid var(--navy-700);
+}
+
+.stat {
+  background: var(--navy-950);
+  padding: 22px 10px;
+  text-align: center;
+}
+
+.stat-num {
+  display: block;
+  font-family: var(--font-display);
+  font-size: 26px;
+  font-weight: 700;
+  color: var(--teal);
+}
+
+.stat-label {
+  display: block;
+  margin-top: 4px;
+  font-size: 12.5px;
+  color: var(--slate-dim);
+}
+
+.board-section {
+  padding: 48px 0 8px;
+}
+
+.board-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 18px;
+}
+
+.board-head h2 {
+  margin: 0;
+  font-size: 22px;
+  font-weight: 700;
+}
+
+.log-btn {
+  display: inline-block;
+  background: var(--amber);
+  color: var(--navy-950);
+  font-weight: 700;
+  font-size: 14px;
+  text-decoration: none;
+  padding: 9px 16px;
+  border-radius: 7px;
+  white-space: nowrap;
+  transition: transform 0.15s ease, background 0.15s ease;
+}
+
+.log-btn:hover { background: #ffc633; transform: translateY(-1px); }
+
+.log-btn.ghost {
+  background: transparent;
+  color: var(--amber);
+  border: 1px solid var(--amber-dim);
+}
+.log-btn.ghost:hover { background: rgba(255,183,3,0.08); }
+
+.board-columns {
+  display: grid;
+  grid-template-columns: 44px 1fr 70px 76px;
+  gap: 12px;
+  padding: 0 16px 10px;
+  color: var(--slate-dim);
+  font-size: 12px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.board-body { border-top: 1px solid var(--navy-700); }
+
+.board-row {
+  display: grid;
+  grid-template-columns: 44px 1fr 70px 76px;
+  gap: 12px;
+  align-items: center;
+  width: 100%;
+  padding: 14px 16px;
+  background: var(--navy-900);
+  border: none;
+  border-bottom: 1px solid var(--navy-800);
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.board-row:hover { background: var(--navy-800); }
+.board-row.is-open { background: var(--navy-800); }
+
+.col-rank {
+  font-family: var(--font-display);
+  color: var(--slate);
+  font-size: 14px;
+}
+
+.col-airport {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.airport-code {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 15px;
+  letter-spacing: 0.03em;
+}
+
+.airport-name {
+  font-size: 12.5px;
+  color: var(--slate-dim);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.col-visits {
+  font-family: var(--font-display);
+  color: var(--slate);
+  font-size: 13px;
+  text-align: center;
+}
+
+.col-total { display: flex; justify-content: flex-end; }
+
+.total-pill {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 13px;
+  color: var(--navy-950);
+  background: var(--pill-color, var(--teal));
+  padding: 5px 10px;
+  border-radius: 999px;
+  min-width: 48px;
+  text-align: center;
+}
+
+.board-detail {
+  background: var(--navy-950);
+  padding: 20px 16px 26px;
+  border-bottom: 1px solid var(--navy-800);
+}
+
+.breakdown {
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+  margin-bottom: 22px;
+}
+
+.breakdown-row {
+  display: grid;
+  grid-template-columns: 140px 1fr 34px;
+  align-items: center;
+  gap: 10px;
+}
+
+.bd-label {
+  font-size: 13px;
+  color: var(--slate);
+}
+
+.bd-bar {
+  height: 6px;
+  background: var(--navy-800);
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.bd-bar > span {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+}
+
+.bd-val {
+  font-family: var(--font-display);
+  font-size: 12.5px;
+  color: var(--slate);
+  text-align: right;
+}
+
+.flight-log-heading {
+  margin: 0 0 10px;
+  font-size: 12px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--slate-dim);
+}
+
+.flight-log-row {
+  display: grid;
+  grid-template-columns: 100px 1fr 1fr;
+  gap: 10px;
+  padding: 7px 0;
+  border-top: 1px solid var(--navy-800);
+  font-size: 12.5px;
+  color: var(--slate);
+}
+
+.flight-log-row:first-of-type { border-top: none; }
+
+.flr-date { font-family: var(--font-display); color: var(--cream); }
+
+.loading-msg {
+  padding: 30px 16px;
+  color: var(--slate-dim);
+  font-size: 14px;
+}
+
+.method {
+  padding: 52px 0 60px;
+  border-top: 1px solid var(--navy-700);
+  margin-top: 20px;
+}
+
+.method h2 {
+  margin: 0 0 14px;
+  font-size: 20px;
+}
+
+.method p {
+  color: var(--slate);
+  font-size: 14.5px;
+  max-width: 62ch;
+}
+
+.method-weights {
+  list-style: none;
+  margin: 20px 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  max-width: 480px;
+}
+
+.method-weights li {
+  display: grid;
+  grid-template-columns: 150px 1fr 40px;
+  align-items: center;
+  gap: 10px;
+}
+
+.mw-label { font-size: 13.5px; color: var(--cream); }
+
+.mw-bar {
+  height: 6px;
+  background: var(--navy-800);
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.mw-bar > span {
+  display: block;
+  height: 100%;
+  background: var(--amber);
+  border-radius: 999px;
+}
+
+.mw-pct {
+  font-family: var(--font-display);
+  font-size: 12.5px;
+  color: var(--slate);
+  text-align: right;
+}
+
+.method-note { font-size: 13.5px; }
+
+.site-footer {
+  border-top: 1px solid var(--navy-700);
+  padding: 30px 0 60px;
+}
+
+.site-footer .wrap {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.site-footer p {
+  margin: 0;
+  color: var(--slate-dim);
+  font-size: 13px;
+  max-width: 50ch;
+}
+
+@media (max-width: 560px) {
+  .board-columns { display: none; }
+  .board-row {
+    grid-template-columns: 30px 1fr 60px;
+    padding: 12px;
+  }
+  .col-visits { display: none; }
+  .breakdown-row { grid-template-columns: 100px 1fr 30px; }
+  .flight-log-row { grid-template-columns: 78px 1fr 1fr; font-size: 11.5px; }
+  .site-footer .wrap { flex-direction: column; align-items: flex-start; }
+}
+</style>
+</head>
+<body>
+
+<div class="grain"></div>
+
+<header class="site-header">
+  <div class="wrap">
+    <div class="brand">
+      <span class="brand-mark">✈</span>
+      <span class="brand-name">Gate Check</span>
+    </div>
+    <p class="tagline">One frequent flyer's unsolicited, spreadsheet-backed rankings of every airport he's been dragged through.</p>
+  </div>
+</header>
+
+<main class="wrap">
+
+  <section id="hero" class="hero" aria-live="polite">
+    <p class="hero-label">Currently ranked #1</p>
+    <div id="hero-flap" class="flap-display">
+      <span class="flap-loading">LOADING&hellip;</span>
+    </div>
+    <p id="hero-name" class="hero-name">&nbsp;</p>
+  </section>
+
+  <section id="stats" class="stats-strip">
+    <div class="stat">
+      <span id="stat-airports" class="stat-num">–</span>
+      <span class="stat-label">airports rated</span>
+    </div>
+    <div class="stat">
+      <span id="stat-flights" class="stat-num">–</span>
+      <span class="stat-label">flights logged</span>
+    </div>
+    <div class="stat">
+      <span id="stat-updated" class="stat-num">–</span>
+      <span class="stat-label">last logged</span>
+    </div>
+  </section>
+
+  <section class="board-section">
+    <div class="board-head">
+      <h2>The Board</h2>
+      <a class="log-btn" href="https://forms.gle/p8MTYvcDFLPehHbJA" target="_blank" rel="noopener">Log a flight ✈</a>
+    </div>
+
+    <div class="board-columns" aria-hidden="true">
+      <span class="col-rank">Rank</span>
+      <span class="col-airport">Airport</span>
+      <span class="col-visits">Visits</span>
+      <span class="col-total">Total</span>
+    </div>
+
+    <div id="board-body" class="board-body">
+      <p class="loading-msg">Pulling the flight log&hellip;</p>
+    </div>
+  </section>
+
+  <section class="method">
+    <h2>How the score works</h2>
+    <p>Every landing gets rated across seven categories on a 0–10 scale, weighted by how much each one actually matters to a layover:</p>
+    <ul id="method-weights" class="method-weights"></ul>
+    <p class="method-note">Delay and rental-car situation start as multiple choice on the form, then get converted to the same 0–10 scale before the weights are applied. An airport's total is the weighted average of every visit logged there — so a bad day at a good airport won't tank it, but a pattern will.</p>
+  </section>
+
+</main>
+
+<footer class="site-footer">
+  <div class="wrap">
+    <p>Rated one boarding pass at a time by Levi. Data lives in a Google Sheet; this page just does the math.</p>
+    <a class="log-btn ghost" href="https://forms.gle/p8MTYvcDFLPehHbJA" target="_blank" rel="noopener">Log a flight ✈</a>
+  </div>
+</footer>
+
+<script>
+// ---- IATA code -> { name, city, state } ----
+// Covers major US airports. Unknown codes fall back gracefully to the raw code.
+const AIRPORTS = {
+  IND: { name: "Indianapolis International Airport", city: "Indianapolis", state: "IN" },
+  CVG: { name: "Cincinnati / Northern Kentucky International Airport", city: "Hebron", state: "KY" },
+  BNA: { name: "Nashville International Airport", city: "Nashville", state: "TN" },
+  MIA: { name: "Miami International Airport", city: "Miami", state: "FL" },
+  DEN: { name: "Denver International Airport", city: "Denver", state: "CO" },
+  MKE: { name: "General Mitchell International Airport", city: "Milwaukee", state: "WI" },
+  MDW: { name: "Chicago Midway International Airport", city: "Chicago", state: "IL" },
+  ORD: { name: "Chicago O'Hare International Airport", city: "Chicago", state: "IL" },
+  RSW: { name: "Southwest Florida International Airport", city: "Fort Myers", state: "FL" },
+  BWI: { name: "Baltimore/Washington International Airport", city: "Baltimore", state: "MD" },
+  MSP: { name: "Minneapolis–Saint Paul International Airport", city: "Minneapolis", state: "MN" },
+  MCO: { name: "Orlando International Airport", city: "Orlando", state: "FL" },
+  SAV: { name: "Savannah/Hilton Head International Airport", city: "Savannah", state: "GA" },
+  PHX: { name: "Phoenix Sky Harbor International Airport", city: "Phoenix", state: "AZ" },
+  RDU: { name: "Raleigh-Durham International Airport", city: "Raleigh", state: "NC" },
+  ATL: { name: "Hartsfield-Jackson Atlanta International Airport", city: "Atlanta", state: "GA" },
+  AUS: { name: "Austin-Bergstrom International Airport", city: "Austin", state: "TX" },
+  MYR: { name: "Myrtle Beach International Airport", city: "Myrtle Beach", state: "SC" },
+  ABR: { name: "Aberdeen Regional Airport", city: "Aberdeen", state: "SD" },
+  JFK: { name: "John F. Kennedy International Airport", city: "New York", state: "NY" },
+  LGA: { name: "LaGuardia Airport", city: "New York", state: "NY" },
+  EWR: { name: "Newark Liberty International Airport", city: "Newark", state: "NJ" },
+  LAX: { name: "Los Angeles International Airport", city: "Los Angeles", state: "CA" },
+  SFO: { name: "San Francisco International Airport", city: "San Francisco", state: "CA" },
+  SEA: { name: "Seattle-Tacoma International Airport", city: "Seattle", state: "WA" },
+  LAS: { name: "Harry Reid International Airport", city: "Las Vegas", state: "NV" },
+  DFW: { name: "Dallas/Fort Worth International Airport", city: "Dallas", state: "TX" },
+  IAH: { name: "George Bush Intercontinental Airport", city: "Houston", state: "TX" },
+  CLT: { name: "Charlotte Douglas International Airport", city: "Charlotte", state: "NC" },
+  PHL: { name: "Philadelphia International Airport", city: "Philadelphia", state: "PA" },
+  DTW: { name: "Detroit Metropolitan Airport", city: "Detroit", state: "MI" },
+  BOS: { name: "Logan International Airport", city: "Boston", state: "MA" },
+  FLL: { name: "Fort Lauderdale-Hollywood International Airport", city: "Fort Lauderdale", state: "FL" },
+  TPA: { name: "Tampa International Airport", city: "Tampa", state: "FL" },
+  STL: { name: "St. Louis Lambert International Airport", city: "St. Louis", state: "MO" },
+  PIT: { name: "Pittsburgh International Airport", city: "Pittsburgh", state: "PA" },
+  CLE: { name: "Cleveland Hopkins International Airport", city: "Cleveland", state: "OH" },
+  CMH: { name: "John Glenn Columbus International Airport", city: "Columbus", state: "OH" },
+  SDF: { name: "Louisville Muhammad Ali International Airport", city: "Louisville", state: "KY" },
+  DAY: { name: "Dayton International Airport", city: "Dayton", state: "OH" },
+  FWA: { name: "Fort Wayne International Airport", city: "Fort Wayne", state: "IN" },
+  SBN: { name: "South Bend International Airport", city: "South Bend", state: "IN" },
+  GRR: { name: "Gerald R. Ford International Airport", city: "Grand Rapids", state: "MI" },
+  MCI: { name: "Kansas City International Airport", city: "Kansas City", state: "MO" },
+  OMA: { name: "Eppley Airfield", city: "Omaha", state: "NE" },
+  DSM: { name: "Des Moines International Airport", city: "Des Moines", state: "IA" },
+  ANC: { name: "Ted Stevens Anchorage International Airport", city: "Anchorage", state: "AK" },
+  HNL: { name: "Daniel K. Inouye International Airport", city: "Honolulu", state: "HI" },
+  PDX: { name: "Portland International Airport", city: "Portland", state: "OR" },
+  SLC: { name: "Salt Lake City International Airport", city: "Salt Lake City", state: "UT" },
+  SAN: { name: "San Diego International Airport", city: "San Diego", state: "CA" },
+  SAT: { name: "San Antonio International Airport", city: "San Antonio", state: "TX" },
+  ELP: { name: "El Paso International Airport", city: "El Paso", state: "TX" },
+  ABQ: { name: "Albuquerque International Sunport", city: "Albuquerque", state: "NM" },
+  TUS: { name: "Tucson International Airport", city: "Tucson", state: "AZ" },
+  RNO: { name: "Reno-Tahoe International Airport", city: "Reno", state: "NV" },
+  BOI: { name: "Boise Airport", city: "Boise", state: "ID" },
+  MSN: { name: "Dane County Regional Airport", city: "Madison", state: "WI" },
+  GRB: { name: "Green Bay-Austin Straubel International Airport", city: "Green Bay", state: "WI" },
+};
+
+function getAirportInfo(code) {
+  const c = (code || "").trim().toUpperCase();
+  return AIRPORTS[c] || { name: c, city: "", state: "" };
+}
+
+// ---- Config: published Google Sheet CSV endpoints ----
+const RESPONSES_CSV_URL =
+  "https://docs.google.com/spreadsheets/d/e/2PACX-1vR54CnrLNkh_UuMJ1Hetsu3DhQ0E4vm7B48yazB-ODIQNcV7zXq42U0CWQ5RjaUSXarnB8L4VSPYl81/pub?gid=1090662342&single=true&output=csv";
+const MISC_CSV_URL =
+  "https://docs.google.com/spreadsheets/d/e/2PACX-1vR54CnrLNkh_UuMJ1Hetsu3DhQ0E4vm7B48yazB-ODIQNcV7zXq42U0CWQ5RjaUSXarnB8L4VSPYl81/pub?gid=861406056&single=true&output=csv";
+
+const CATEGORY_DEFS = [
+  { key: "Cleanliness", source: "direct", field: "Cleanliness" },
+  { key: "Space", source: "direct", field: "Space" },
+  { key: "Workability", source: "direct", field: "Workability" },
+  { key: "Food Options", source: "direct", field: "Food Options" },
+  { key: "Taxi Time", source: "direct", field: "Taxi Time" },
+  { key: "Delay", source: "lookup", field: "Delay?", label: "On-Time Performance" },
+  { key: "Rental Car Situation", source: "lookup", field: "Rental Car Situation" },
+];
+
+function parseCSV(text) {
+  const rows = [];
+  let row = [];
+  let field = "";
+  let inQuotes = false;
+  const s = text.replace(/\r\n/g, "\n").replace(/\r/g, "\n");
+  for (let i = 0; i < s.length; i++) {
+    const c = s[i];
+    if (inQuotes) {
+      if (c === '"') {
+        if (s[i + 1] === '"') {
+          field += '"';
+          i++;
+        } else {
+          inQuotes = false;
+        }
+      } else {
+        field += c;
+      }
+    } else if (c === '"') {
+      inQuotes = true;
+    } else if (c === ",") {
+      row.push(field);
+      field = "";
+    } else if (c === "\n") {
+      row.push(field);
+      rows.push(row);
+      row = [];
+      field = "";
+    } else {
+      field += c;
+    }
+  }
+  if (field.length > 0 || row.length > 0) {
+    row.push(field);
+    rows.push(row);
+  }
+  return rows.filter((r) => r.some((f) => f.trim() !== ""));
+}
+
+function rowsToObjects(rows) {
+  if (!rows.length) return [];
+  const header = rows[0].map((h) => h.trim());
+  return rows.slice(1).map((r) => {
+    const obj = {};
+    header.forEach((h, i) => (obj[h] = (r[i] ?? "").trim()));
+    return obj;
+  });
+}
+
+function parseWeightValue(raw) {
+  const s = (raw || "").trim();
+  const hasPercent = s.includes("%");
+  const num = parseFloat(s.replace("%", ""));
+  if (Number.isNaN(num)) return 0;
+  if (hasPercent) return num / 100;
+  return num > 1 ? num / 100 : num;
+}
+
+function parseMisc(rawRows) {
+  const ratingMap = {};
+  const weightMap = {};
+  let mode = null;
+  for (const r of rawRows) {
+    const a = (r[0] || "").trim();
+    const b = (r[1] || "").trim();
+    if (!a) continue;
+    if (a.toLowerCase() === "type" && b.toLowerCase() === "rating") {
+      mode = "rating";
+      continue;
+    }
+    if (a.toLowerCase() === "question" && b.toLowerCase() === "weight") {
+      mode = "weight";
+      continue;
+    }
+    if (mode === "rating") ratingMap[a] = parseFloat(b);
+    else if (mode === "weight") weightMap[a] = parseWeightValue(b);
+  }
+  return { ratingMap, weightMap };
+}
+
+function toNumber(ratingMap, def, row) {
+  const raw = row[def.field];
+  if (def.source === "direct") {
+    const n = parseFloat(raw);
+    return Number.isNaN(n) ? null : n;
+  }
+  if (raw in ratingMap) return ratingMap[raw];
+  const found = Object.keys(ratingMap).find(
+    (k) => k.toLowerCase() === raw.toLowerCase()
+  );
+  return found ? ratingMap[found] : null;
+}
+
+function parseTravelDate(s) {
+  const parts = (s || "").split("/");
+  if (parts.length !== 3) return null;
+  const [m, d, y] = parts.map((p) => parseInt(p, 10));
+  if (!m || !d || !y) return null;
+  return new Date(y, m - 1, d);
+}
+
+function buildAirportStats(responses, ratingMap, weightMap) {
+  const byCode = {};
+  for (const row of responses) {
+    const code = (row["Airport Code"] || "").trim().toUpperCase();
+    if (!code) continue;
+    if (!byCode[code]) byCode[code] = { code, visits: [] };
+
+    const visit = { date: parseTravelDate(row["Travel Date"]), values: {} };
+    let ok = true;
+    for (const def of CATEGORY_DEFS) {
+      const v = toNumber(ratingMap, def, row);
+      if (v === null) ok = false;
+      visit.values[def.key] = v;
+    }
+    visit.delayLabel = row["Delay?"];
+    visit.rentalLabel = row["Rental Car Situation"];
+    visit.complete = ok;
+    byCode[code].visits.push(visit);
+  }
+
+  const airports = Object.values(byCode).map((entry) => {
+    const usable = entry.visits.filter((v) => v.complete);
+    const avgs = {};
+    for (const def of CATEGORY_DEFS) {
+      const sum = usable.reduce((acc, v) => acc + (v.values[def.key] || 0), 0);
+      avgs[def.key] = usable.length ? sum / usable.length : 0;
+    }
+    let totalOutOf10 = 0;
+    for (const def of CATEGORY_DEFS) {
+      totalOutOf10 += avgs[def.key] * (weightMap[def.key] || 0);
+    }
+    entry.visits.sort((a, b) => (b.date || 0) - (a.date || 0));
+    return {
+      code: entry.code,
+      visits: entry.visits,
+      visitCount: usable.length,
+      avgs,
+      totalPct: totalOutOf10 * 10,
+    };
+  });
+
+  airports.sort((a, b) => b.totalPct - a.totalPct);
+  return airports;
+}
+
+function scoreColor(pct) {
+  const coral = [251, 113, 133];
+  const amber = [255, 183, 3];
+  const teal = [94, 234, 212];
+  const t = Math.max(0, Math.min(100, pct)) / 100;
+  let c1, c2, f;
+  if (t < 0.5) {
+    c1 = coral;
+    c2 = amber;
+    f = t / 0.5;
+  } else {
+    c1 = amber;
+    c2 = teal;
+    f = (t - 0.5) / 0.5;
+  }
+  const mix = c1.map((v, i) => Math.round(v + (c2[i] - v) * f));
+  return `rgb(${mix.join(",")})`;
+}
+
+function fmtDate(d) {
+  if (!d) return "";
+  return d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+}
+
+function renderHero(top) {
+  const flap = document.getElementById("hero-flap");
+  const nameEl = document.getElementById("hero-name");
+  if (!top) {
+    flap.innerHTML = '<span class="flap-loading">NO DATA</span>';
+    return;
+  }
+  const info = getAirportInfo(top.code);
+  flap.innerHTML = "";
+  top.code.split("").forEach((ch, i) => {
+    const span = document.createElement("span");
+    span.className = "flap-char";
+    span.style.animationDelay = `${i * 90}ms`;
+    span.textContent = ch;
+    flap.appendChild(span);
+  });
+  nameEl.textContent = `${info.name} · ${Math.round(top.totalPct)}%`;
+}
+
+function renderStats(airports, responses) {
+  document.getElementById("stat-airports").textContent = airports.length;
+  document.getElementById("stat-flights").textContent = responses.length;
+  const dates = responses.map((r) => parseTravelDate(r["Travel Date"])).filter(Boolean);
+  const last = dates.length ? new Date(Math.max(...dates)) : null;
+  document.getElementById("stat-updated").textContent = last ? fmtDate(last) : "–";
+}
+
+function categoryDisplayName(key) {
+  const def = CATEGORY_DEFS.find((d) => d.key === key);
+  return (def && def.label) || key;
+}
+
+function renderMethodology(weightMap) {
+  const ul = document.getElementById("method-weights");
+  ul.innerHTML = "";
+  for (const def of CATEGORY_DEFS) {
+    const li = document.createElement("li");
+    const label = def.label || def.key;
+    const pct = Math.round((weightMap[def.key] || 0) * 100);
+    li.innerHTML = `<span class="mw-label">${label}</span><span class="mw-bar"><span style="width:${pct}%"></span></span><span class="mw-pct">${pct}%</span>`;
+    ul.appendChild(li);
+  }
+}
+
+function renderBoard(airports) {
+  const body = document.getElementById("board-body");
+  body.innerHTML = "";
+
+  airports.forEach((a, idx) => {
+    const info = getAirportInfo(a.code);
+    const rank = idx + 1;
+    const color = scoreColor(a.totalPct);
+
+    const row = document.createElement("button");
+    row.className = "board-row";
+    row.setAttribute("aria-expanded", "false");
+    row.innerHTML = `
+      <span class="col-rank">${rank}</span>
+      <span class="col-airport">
+        <span class="airport-code">${a.code}</span>
+        <span class="airport-name">${info.name}${info.city ? ` · ${info.city}, ${info.state}` : ""}</span>
+      </span>
+      <span class="col-visits">${a.visitCount}</span>
+      <span class="col-total">
+        <span class="total-pill" style="--pill-color:${color}">${Math.round(a.totalPct)}%</span>
+      </span>
+    `;
+
+    const detail = document.createElement("div");
+    detail.className = "board-detail";
+    detail.hidden = true;
+
+    const breakdown = document.createElement("div");
+    breakdown.className = "breakdown";
+    CATEGORY_DEFS.forEach((def) => {
+      const val = a.avgs[def.key] || 0;
+      const barColor = scoreColor(val * 10);
+      const line = document.createElement("div");
+      line.className = "breakdown-row";
+      line.innerHTML = `
+        <span class="bd-label">${categoryDisplayName(def.key)}</span>
+        <span class="bd-bar"><span style="width:${(val / 10) * 100}%;background:${barColor}"></span></span>
+        <span class="bd-val">${val.toFixed(1)}</span>
+      `;
+      breakdown.appendChild(line);
+    });
+
+    const log = document.createElement("div");
+    log.className = "flight-log";
+    const logHeading = document.createElement("p");
+    logHeading.className = "flight-log-heading";
+    logHeading.textContent = `Flight log (${a.visits.length})`;
+    log.appendChild(logHeading);
+
+    a.visits.forEach((v) => {
+      const item = document.createElement("div");
+      item.className = "flight-log-row";
+      item.innerHTML = `
+        <span class="flr-date">${fmtDate(v.date)}</span>
+        <span class="flr-delay">${v.delayLabel || "–"}</span>
+        <span class="flr-rental">${v.rentalLabel || "–"}</span>
+      `;
+      log.appendChild(item);
+    });
+
+    detail.appendChild(breakdown);
+    detail.appendChild(log);
+
+    row.addEventListener("click", () => {
+      const isOpen = !detail.hidden;
+      detail.hidden = isOpen;
+      row.setAttribute("aria-expanded", String(!isOpen));
+      row.classList.toggle("is-open", !isOpen);
+    });
+
+    body.appendChild(row);
+    body.appendChild(detail);
+  });
+}
+
+async function fetchCSV(url) {
+  const res = await fetch(url, { cache: "no-store" });
+  if (!res.ok) throw new Error(`Failed to fetch ${url}: ${res.status}`);
+  return res.text();
+}
+
+async function boot() {
+  try {
+    const [responsesText, miscText] = await Promise.all([
+      fetchCSV(RESPONSES_CSV_URL),
+      fetchCSV(MISC_CSV_URL),
+    ]);
+
+    const responses = rowsToObjects(parseCSV(responsesText));
+    const { ratingMap, weightMap } = parseMisc(parseCSV(miscText));
+
+    const airports = buildAirportStats(responses, ratingMap, weightMap);
+
+    renderHero(airports[0]);
+    renderStats(airports, responses);
+    renderMethodology(weightMap);
+    renderBoard(airports);
+  } catch (err) {
+    console.error(err);
+    document.getElementById("board-body").innerHTML =
+      '<p class="loading-msg">Couldn\'t load the flight log right now. Check back in a bit.</p>';
+    document.getElementById("hero-flap").innerHTML = '<span class="flap-loading">ERROR</span>';
+  }
+}
+
+boot();
+</script>
+</body>
+</html>
