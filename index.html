@@ -10,6 +10,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700;800&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="">
 <style>
 :root {
   --navy-950: #0e1620;
@@ -183,6 +184,72 @@ a { color: var(--teal); }
 
 .board-section {
   padding: 48px 0 8px;
+}
+
+.map-section {
+  padding: 44px 0 8px;
+  border-top: 1px solid var(--navy-700);
+}
+
+.map-section h2 {
+  margin: 0 0 16px;
+  font-size: 22px;
+  font-weight: 700;
+}
+
+#airport-map {
+  height: 420px;
+  border-radius: 10px;
+  overflow: hidden;
+  border: 1px solid var(--navy-700);
+  background: var(--navy-900);
+}
+
+.map-hint {
+  margin: 10px 2px 0;
+  font-size: 12.5px;
+  color: var(--slate-dim);
+}
+
+.leaflet-popup-content-wrapper,
+.leaflet-popup-tip {
+  background: var(--navy-800);
+  color: var(--cream);
+}
+
+.leaflet-popup-content {
+  font-family: var(--font-body);
+  font-size: 13px;
+  margin: 10px 12px;
+}
+
+.leaflet-popup-content strong {
+  font-family: var(--font-display);
+  letter-spacing: 0.02em;
+}
+
+.leaflet-container {
+  background: var(--navy-950);
+  font-family: var(--font-body);
+}
+
+.leaflet-control-attribution {
+  background: rgba(14, 22, 32, 0.75) !important;
+  color: var(--slate-dim) !important;
+}
+
+.leaflet-control-attribution a {
+  color: var(--slate) !important;
+}
+
+.leaflet-control-zoom a {
+  background: var(--navy-800) !important;
+  color: var(--cream) !important;
+  border-color: var(--navy-600) !important;
+}
+
+.leaflet-control-zoom a:hover {
+  background: var(--navy-700) !important;
 }
 
 .board-head {
@@ -506,6 +573,12 @@ a { color: var(--teal); }
     </div>
   </section>
 
+  <section class="map-section">
+    <h2>Where I've Been</h2>
+    <div id="airport-map"></div>
+    <p class="map-hint">Pin size and color scale with visit count and score. Tap a pin for details.</p>
+  </section>
+
   <section class="board-section">
     <div class="board-head">
       <h2>The Board</h2>
@@ -540,70 +613,83 @@ a { color: var(--teal); }
   </div>
 </footer>
 
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
 <script>
-// ---- IATA code -> { name, city, state } ----
-// Covers major US airports. Unknown codes fall back gracefully to the raw code.
+// ---- IATA code -> { name, city, state, lat, lon } ----
+// Covers major US airports. Unknown codes fall back gracefully to the raw code
+// (and just won't get a pin on the map, since there's nowhere to put it).
 const AIRPORTS = {
-  IND: { name: "Indianapolis International Airport", city: "Indianapolis", state: "IN" },
-  CVG: { name: "Cincinnati / Northern Kentucky International Airport", city: "Hebron", state: "KY" },
-  BNA: { name: "Nashville International Airport", city: "Nashville", state: "TN" },
-  MIA: { name: "Miami International Airport", city: "Miami", state: "FL" },
-  DEN: { name: "Denver International Airport", city: "Denver", state: "CO" },
-  MKE: { name: "General Mitchell International Airport", city: "Milwaukee", state: "WI" },
-  MDW: { name: "Chicago Midway International Airport", city: "Chicago", state: "IL" },
-  ORD: { name: "Chicago O'Hare International Airport", city: "Chicago", state: "IL" },
-  RSW: { name: "Southwest Florida International Airport", city: "Fort Myers", state: "FL" },
-  BWI: { name: "Baltimore/Washington International Airport", city: "Baltimore", state: "MD" },
-  MSP: { name: "Minneapolis–Saint Paul International Airport", city: "Minneapolis", state: "MN" },
-  MCO: { name: "Orlando International Airport", city: "Orlando", state: "FL" },
-  SAV: { name: "Savannah/Hilton Head International Airport", city: "Savannah", state: "GA" },
-  PHX: { name: "Phoenix Sky Harbor International Airport", city: "Phoenix", state: "AZ" },
-  RDU: { name: "Raleigh-Durham International Airport", city: "Raleigh", state: "NC" },
-  ATL: { name: "Hartsfield-Jackson Atlanta International Airport", city: "Atlanta", state: "GA" },
-  AUS: { name: "Austin-Bergstrom International Airport", city: "Austin", state: "TX" },
-  MYR: { name: "Myrtle Beach International Airport", city: "Myrtle Beach", state: "SC" },
-  ABR: { name: "Aberdeen Regional Airport", city: "Aberdeen", state: "SD" },
-  JFK: { name: "John F. Kennedy International Airport", city: "New York", state: "NY" },
-  LGA: { name: "LaGuardia Airport", city: "New York", state: "NY" },
-  EWR: { name: "Newark Liberty International Airport", city: "Newark", state: "NJ" },
-  LAX: { name: "Los Angeles International Airport", city: "Los Angeles", state: "CA" },
-  SFO: { name: "San Francisco International Airport", city: "San Francisco", state: "CA" },
-  SEA: { name: "Seattle-Tacoma International Airport", city: "Seattle", state: "WA" },
-  LAS: { name: "Harry Reid International Airport", city: "Las Vegas", state: "NV" },
-  DFW: { name: "Dallas/Fort Worth International Airport", city: "Dallas", state: "TX" },
-  IAH: { name: "George Bush Intercontinental Airport", city: "Houston", state: "TX" },
-  CLT: { name: "Charlotte Douglas International Airport", city: "Charlotte", state: "NC" },
-  PHL: { name: "Philadelphia International Airport", city: "Philadelphia", state: "PA" },
-  DTW: { name: "Detroit Metropolitan Airport", city: "Detroit", state: "MI" },
-  BOS: { name: "Logan International Airport", city: "Boston", state: "MA" },
-  FLL: { name: "Fort Lauderdale-Hollywood International Airport", city: "Fort Lauderdale", state: "FL" },
-  TPA: { name: "Tampa International Airport", city: "Tampa", state: "FL" },
-  STL: { name: "St. Louis Lambert International Airport", city: "St. Louis", state: "MO" },
-  PIT: { name: "Pittsburgh International Airport", city: "Pittsburgh", state: "PA" },
-  CLE: { name: "Cleveland Hopkins International Airport", city: "Cleveland", state: "OH" },
-  CMH: { name: "John Glenn Columbus International Airport", city: "Columbus", state: "OH" },
-  SDF: { name: "Louisville Muhammad Ali International Airport", city: "Louisville", state: "KY" },
-  DAY: { name: "Dayton International Airport", city: "Dayton", state: "OH" },
-  FWA: { name: "Fort Wayne International Airport", city: "Fort Wayne", state: "IN" },
-  SBN: { name: "South Bend International Airport", city: "South Bend", state: "IN" },
-  GRR: { name: "Gerald R. Ford International Airport", city: "Grand Rapids", state: "MI" },
-  MCI: { name: "Kansas City International Airport", city: "Kansas City", state: "MO" },
-  OMA: { name: "Eppley Airfield", city: "Omaha", state: "NE" },
-  DSM: { name: "Des Moines International Airport", city: "Des Moines", state: "IA" },
-  ANC: { name: "Ted Stevens Anchorage International Airport", city: "Anchorage", state: "AK" },
-  HNL: { name: "Daniel K. Inouye International Airport", city: "Honolulu", state: "HI" },
-  PDX: { name: "Portland International Airport", city: "Portland", state: "OR" },
-  SLC: { name: "Salt Lake City International Airport", city: "Salt Lake City", state: "UT" },
-  SAN: { name: "San Diego International Airport", city: "San Diego", state: "CA" },
-  SAT: { name: "San Antonio International Airport", city: "San Antonio", state: "TX" },
-  ELP: { name: "El Paso International Airport", city: "El Paso", state: "TX" },
-  ABQ: { name: "Albuquerque International Sunport", city: "Albuquerque", state: "NM" },
-  TUS: { name: "Tucson International Airport", city: "Tucson", state: "AZ" },
-  RNO: { name: "Reno-Tahoe International Airport", city: "Reno", state: "NV" },
-  BOI: { name: "Boise Airport", city: "Boise", state: "ID" },
-  MSN: { name: "Dane County Regional Airport", city: "Madison", state: "WI" },
-  GRB: { name: "Green Bay-Austin Straubel International Airport", city: "Green Bay", state: "WI" },
+  IND: { name: "Indianapolis International Airport", city: "Indianapolis", state: "IN", lat: 39.7173, lon: -86.2944 },
+  CVG: { name: "Cincinnati / Northern Kentucky International Airport", city: "Hebron", state: "KY", lat: 39.0489, lon: -84.6678 },
+  BNA: { name: "Nashville International Airport", city: "Nashville", state: "TN", lat: 36.1263, lon: -86.6774 },
+  MIA: { name: "Miami International Airport", city: "Miami", state: "FL", lat: 25.7959, lon: -80.2870 },
+  DEN: { name: "Denver International Airport", city: "Denver", state: "CO", lat: 39.8561, lon: -104.6737 },
+  MKE: { name: "General Mitchell International Airport", city: "Milwaukee", state: "WI", lat: 42.9472, lon: -87.8966 },
+  MDW: { name: "Chicago Midway International Airport", city: "Chicago", state: "IL", lat: 41.7868, lon: -87.7522 },
+  ORD: { name: "Chicago O'Hare International Airport", city: "Chicago", state: "IL", lat: 41.9742, lon: -87.9073 },
+  RSW: { name: "Southwest Florida International Airport", city: "Fort Myers", state: "FL", lat: 26.5362, lon: -81.7552 },
+  BWI: { name: "Baltimore/Washington International Airport", city: "Baltimore", state: "MD", lat: 39.1774, lon: -76.6684 },
+  MSP: { name: "Minneapolis–Saint Paul International Airport", city: "Minneapolis", state: "MN", lat: 44.8848, lon: -93.2223 },
+  MCO: { name: "Orlando International Airport", city: "Orlando", state: "FL", lat: 28.4312, lon: -81.3081 },
+  SAV: { name: "Savannah/Hilton Head International Airport", city: "Savannah", state: "GA", lat: 32.1276, lon: -81.2021 },
+  PHX: { name: "Phoenix Sky Harbor International Airport", city: "Phoenix", state: "AZ", lat: 33.4373, lon: -112.0078 },
+  RDU: { name: "Raleigh-Durham International Airport", city: "Raleigh", state: "NC", lat: 35.8776, lon: -78.7875 },
+  ATL: { name: "Hartsfield-Jackson Atlanta International Airport", city: "Atlanta", state: "GA", lat: 33.6407, lon: -84.4277 },
+  AUS: { name: "Austin-Bergstrom International Airport", city: "Austin", state: "TX", lat: 30.1975, lon: -97.6664 },
+  MYR: { name: "Myrtle Beach International Airport", city: "Myrtle Beach", state: "SC", lat: 33.6797, lon: -78.9283 },
+  ABR: { name: "Aberdeen Regional Airport", city: "Aberdeen", state: "SD", lat: 45.4491, lon: -98.4218 },
+  GSP: { name: "Greenville-Spartanburg International Airport", city: "Greer", state: "SC", lat: 34.8957, lon: -82.2189 },
+  CHS: { name: "Charleston International Airport", city: "Charleston", state: "SC", lat: 32.8986, lon: -80.0405 },
+  CAE: { name: "Columbia Metropolitan Airport", city: "Columbia", state: "SC", lat: 33.9388, lon: -81.1195 },
+  GSO: { name: "Piedmont Triad International Airport", city: "Greensboro", state: "NC", lat: 36.0978, lon: -79.9373 },
+  TYS: { name: "McGhee Tyson Airport", city: "Knoxville", state: "TN", lat: 35.8110, lon: -83.9940 },
+  CHA: { name: "Chattanooga Metropolitan Airport", city: "Chattanooga", state: "TN", lat: 35.0353, lon: -85.2038 },
+  BHM: { name: "Birmingham-Shuttlesworth International Airport", city: "Birmingham", state: "AL", lat: 33.5629, lon: -86.7535 },
+  PNS: { name: "Pensacola International Airport", city: "Pensacola", state: "FL", lat: 30.4734, lon: -87.1866 },
+  SRQ: { name: "Sarasota-Bradenton International Airport", city: "Sarasota", state: "FL", lat: 27.3954, lon: -82.5544 },
+  JAX: { name: "Jacksonville International Airport", city: "Jacksonville", state: "FL", lat: 30.4941, lon: -81.6879 },
+  JFK: { name: "John F. Kennedy International Airport", city: "New York", state: "NY", lat: 40.6413, lon: -73.7781 },
+  LGA: { name: "LaGuardia Airport", city: "New York", state: "NY", lat: 40.7769, lon: -73.8740 },
+  EWR: { name: "Newark Liberty International Airport", city: "Newark", state: "NJ", lat: 40.6895, lon: -74.1745 },
+  LAX: { name: "Los Angeles International Airport", city: "Los Angeles", state: "CA", lat: 33.9416, lon: -118.4085 },
+  SFO: { name: "San Francisco International Airport", city: "San Francisco", state: "CA", lat: 37.6213, lon: -122.3790 },
+  SEA: { name: "Seattle-Tacoma International Airport", city: "Seattle", state: "WA", lat: 47.4502, lon: -122.3088 },
+  LAS: { name: "Harry Reid International Airport", city: "Las Vegas", state: "NV", lat: 36.0840, lon: -115.1537 },
+  DFW: { name: "Dallas/Fort Worth International Airport", city: "Dallas", state: "TX", lat: 32.8998, lon: -97.0403 },
+  IAH: { name: "George Bush Intercontinental Airport", city: "Houston", state: "TX", lat: 29.9902, lon: -95.3368 },
+  CLT: { name: "Charlotte Douglas International Airport", city: "Charlotte", state: "NC", lat: 35.2144, lon: -80.9473 },
+  PHL: { name: "Philadelphia International Airport", city: "Philadelphia", state: "PA", lat: 39.8729, lon: -75.2437 },
+  DTW: { name: "Detroit Metropolitan Airport", city: "Detroit", state: "MI", lat: 42.2124, lon: -83.3534 },
+  BOS: { name: "Logan International Airport", city: "Boston", state: "MA", lat: 42.3656, lon: -71.0096 },
+  FLL: { name: "Fort Lauderdale-Hollywood International Airport", city: "Fort Lauderdale", state: "FL", lat: 26.0742, lon: -80.1506 },
+  TPA: { name: "Tampa International Airport", city: "Tampa", state: "FL", lat: 27.9755, lon: -82.5332 },
+  STL: { name: "St. Louis Lambert International Airport", city: "St. Louis", state: "MO", lat: 38.7487, lon: -90.3700 },
+  PIT: { name: "Pittsburgh International Airport", city: "Pittsburgh", state: "PA", lat: 40.4915, lon: -80.2329 },
+  CLE: { name: "Cleveland Hopkins International Airport", city: "Cleveland", state: "OH", lat: 41.4117, lon: -81.8498 },
+  CMH: { name: "John Glenn Columbus International Airport", city: "Columbus", state: "OH", lat: 39.9980, lon: -82.8919 },
+  SDF: { name: "Louisville Muhammad Ali International Airport", city: "Louisville", state: "KY", lat: 38.1744, lon: -85.7360 },
+  DAY: { name: "Dayton International Airport", city: "Dayton", state: "OH", lat: 39.9024, lon: -84.2194 },
+  FWA: { name: "Fort Wayne International Airport", city: "Fort Wayne", state: "IN", lat: 40.9785, lon: -85.1951 },
+  SBN: { name: "South Bend International Airport", city: "South Bend", state: "IN", lat: 41.7087, lon: -86.3173 },
+  GRR: { name: "Gerald R. Ford International Airport", city: "Grand Rapids", state: "MI", lat: 42.8808, lon: -85.5228 },
+  MCI: { name: "Kansas City International Airport", city: "Kansas City", state: "MO", lat: 39.2976, lon: -94.7139 },
+  OMA: { name: "Eppley Airfield", city: "Omaha", state: "NE", lat: 41.3032, lon: -95.8940 },
+  DSM: { name: "Des Moines International Airport", city: "Des Moines", state: "IA", lat: 41.5340, lon: -93.6631 },
+  ANC: { name: "Ted Stevens Anchorage International Airport", city: "Anchorage", state: "AK", lat: 61.1743, lon: -149.9963 },
+  HNL: { name: "Daniel K. Inouye International Airport", city: "Honolulu", state: "HI", lat: 21.3187, lon: -157.9224 },
+  PDX: { name: "Portland International Airport", city: "Portland", state: "OR", lat: 45.5898, lon: -122.5951 },
+  SLC: { name: "Salt Lake City International Airport", city: "Salt Lake City", state: "UT", lat: 40.7899, lon: -111.9791 },
+  SAN: { name: "San Diego International Airport", city: "San Diego", state: "CA", lat: 32.7338, lon: -117.1933 },
+  SAT: { name: "San Antonio International Airport", city: "San Antonio", state: "TX", lat: 29.5337, lon: -98.4698 },
+  ELP: { name: "El Paso International Airport", city: "El Paso", state: "TX", lat: 31.8072, lon: -106.3776 },
+  ABQ: { name: "Albuquerque International Sunport", city: "Albuquerque", state: "NM", lat: 35.0402, lon: -106.6091 },
+  TUS: { name: "Tucson International Airport", city: "Tucson", state: "AZ", lat: 32.1161, lon: -110.9410 },
+  RNO: { name: "Reno-Tahoe International Airport", city: "Reno", state: "NV", lat: 39.4991, lon: -119.7681 },
+  BOI: { name: "Boise Airport", city: "Boise", state: "ID", lat: 43.5644, lon: -116.2228 },
+  MSN: { name: "Dane County Regional Airport", city: "Madison", state: "WI", lat: 43.1399, lon: -89.3375 },
+  GRB: { name: "Green Bay-Austin Straubel International Airport", city: "Green Bay", state: "WI", lat: 44.4851, lon: -88.1296 },
 };
+
 
 function getAirportInfo(code) {
   const c = (code || "").trim().toUpperCase();
@@ -921,6 +1007,48 @@ function renderBoard(airports) {
   });
 }
 
+let mapInstance = null;
+
+function renderMap(airports) {
+  const el = document.getElementById("airport-map");
+  if (!el || typeof L === "undefined") return;
+
+  const pins = airports
+    .map((a) => ({ a, info: getAirportInfo(a.code) }))
+    .filter((p) => typeof p.info.lat === "number" && typeof p.info.lon === "number");
+
+  if (!mapInstance) {
+    mapInstance = L.map("airport-map", { scrollWheelZoom: false }).setView([39.5, -98.35], 4);
+    L.tileLayer("https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png", {
+      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
+      subdomains: "abcd",
+      maxZoom: 19,
+    }).addTo(mapInstance);
+  }
+
+  const bounds = [];
+  pins.forEach(({ a, info }) => {
+    const color = scoreColor(a.totalPct);
+    const radius = 6 + Math.min(a.visitCount, 8) * 1.6;
+    const marker = L.circleMarker([info.lat, info.lon], {
+      radius,
+      fillColor: color,
+      fillOpacity: 0.85,
+      color: "#0e1620",
+      weight: 2,
+    }).addTo(mapInstance);
+    marker.bindPopup(
+      `<strong>${a.code}</strong> — ${info.name}<br>` +
+      `${Math.round(a.totalPct)}% · ${a.visitCount} visit${a.visitCount === 1 ? "" : "s"}`
+    );
+    bounds.push([info.lat, info.lon]);
+  });
+
+  if (bounds.length) {
+    mapInstance.fitBounds(bounds, { padding: [28, 28], maxZoom: 6 });
+  }
+}
+
 async function fetchCSV(url) {
   const res = await fetch(url, { cache: "no-store" });
   if (!res.ok) throw new Error(`Failed to fetch ${url}: ${res.status}`);
@@ -943,6 +1071,7 @@ async function boot() {
     renderStats(airports, responses);
     renderMethodology(weightMap);
     renderBoard(airports);
+    renderMap(airports);
   } catch (err) {
     console.error(err);
     document.getElementById("board-body").innerHTML =
