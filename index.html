@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -817,7 +818,11 @@ function renderHero(top) {
 
 function renderStats(airports, responses) {
   document.getElementById("stat-airports").textContent = airports.length;
-  document.getElementById("stat-flights").textContent = responses.length;
+  // Count only rows that produced a real, complete visit (matches the rows
+  // actually used in the scoring math) rather than every raw CSV row —
+  // the sheet can have blank/partial rows the form leaves behind.
+  const flightCount = airports.reduce((sum, a) => sum + a.visitCount, 0);
+  document.getElementById("stat-flights").textContent = flightCount;
   const dates = responses.map((r) => parseTravelDate(r["Travel Date"])).filter(Boolean);
   const last = dates.length ? new Date(Math.max(...dates)) : null;
   document.getElementById("stat-updated").textContent = last ? fmtDate(last) : "–";
