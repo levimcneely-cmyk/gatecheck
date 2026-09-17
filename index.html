@@ -768,18 +768,26 @@ function coopCoordKey(town, state) {
   return `${(town || "").trim().toUpperCase()}|${(state || "").trim().toUpperCase()}`;
 }
 
-async function geocodeTownState(town, state) {
+// Synchronous, no-network lookup — static table first, then whatever a
+// prior visit already cached for this browser. Used to render the bulk of
+// the map instantly, before any live geocoding happens.
+function getKnownCoords(town, state) {
   const key = coopCoordKey(town, state);
   if (COOP_TOWN_COORDS[key]) return COOP_TOWN_COORDS[key];
-
-  const cacheKey = `gatecheck-coop-geo:${key}`;
   try {
-    const cached = localStorage.getItem(cacheKey);
+    const cached = localStorage.getItem(`gatecheck-coop-geo:${key}`);
     if (cached) return JSON.parse(cached);
   } catch (e) {
     /* localStorage unavailable — just skip the cache */
   }
+  return null;
+}
 
+// Only called for a town that getKnownCoords() couldn't resolve — this is
+// the slow, live-network path, rate-limited to be polite to the free
+// Nominatim service.
+async function geocodeTownState(town, state) {
+  const key = coopCoordKey(town, state);
   try {
     const q = encodeURIComponent(`${town}, ${state}, USA`);
     const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&limit=1&countrycodes=us&q=${q}`);
@@ -787,12 +795,10 @@ async function geocodeTownState(town, state) {
     if (data && data[0]) {
       const coords = { lat: parseFloat(data[0].lat), lon: parseFloat(data[0].lon) };
       try {
-        localStorage.setItem(cacheKey, JSON.stringify(coords));
+        localStorage.setItem(`gatecheck-coop-geo:${key}`, JSON.stringify(coords));
       } catch (e) {
         /* ignore cache write failures */
       }
-      // Be polite to the free, shared Nominatim service — only pause when
-      // we actually hit the network (cache/static hits return above).
       await new Promise((r) => setTimeout(r, 300));
       return coords;
     }
@@ -871,18 +877,33 @@ function renderCoopLegend(coops) {
     .join("");
 }
 
+function addCoopPin(c, coords) {
+  const color = natureColor(c.primaryNature);
+  const radius = 6 + Math.min(c.engagements.length, 6) * 1.6;
+  const marker = L.circleMarker([coords.lat, coords.lon], {
+    radius,
+    fillColor: color,
+    fillOpacity: 0.85,
+    color: "#0e1620",
+    weight: 2,
+  }).addTo(coopMapInstance);
+
+  const years = [...new Set(c.engagements.map((e) => e.year).filter(Boolean))].sort();
+  const label = c.natures.join(", ") || "Unknown";
+  marker.bindPopup(
+    `<strong>${escapeHtml(c.name)}</strong><br>` +
+    `${escapeHtml(c.town)}, ${escapeHtml(c.state)}<br>` +
+    `${escapeHtml(label)}${years.length ? " · " + years.join(", ") : ""}`
+  );
+  return [coords.lat, coords.lon];
+}
+
 async function renderCoopMap(coops) {
   const el = document.getElementById("coop-map");
   const hint = document.getElementById("coop-map-hint");
   if (!el || typeof L === "undefined") return;
 
   renderCoopLegend(coops);
-
-  const resolved = [];
-  for (const c of coops) {
-    const coords = await geocodeTownState(c.town, c.state);
-    if (coords) resolved.push({ c, coords });
-  }
 
   if (!coopMapInstance) {
     coopMapInstance = L.map("coop-map", { scrollWheelZoom: false }).setView([39.5, -98.35], 4);
@@ -893,30 +914,36 @@ async function renderCoopMap(coops) {
     }).addTo(coopMapInstance);
   }
 
+  // Split into pins we can place instantly (static table or a cached prior
+  // lookup) versus ones that need a live geocode. Placing the fast ones
+  // first means the map isn't stuck waiting on a network round trip for
+  // one unfamiliar town before showing anything at all.
   const bounds = [];
-  resolved.forEach(({ c, coords }) => {
-    const color = natureColor(c.primaryNature);
-    const radius = 6 + Math.min(c.engagements.length, 6) * 1.6;
-    const marker = L.circleMarker([coords.lat, coords.lon], {
-      radius,
-      fillColor: color,
-      fillOpacity: 0.85,
-      color: "#0e1620",
-      weight: 2,
-    }).addTo(coopMapInstance);
-
-    const years = [...new Set(c.engagements.map((e) => e.year).filter(Boolean))].sort();
-    const label = c.natures.join(", ") || "Unknown";
-    marker.bindPopup(
-      `<strong>${escapeHtml(c.name)}</strong><br>` +
-      `${escapeHtml(c.town)}, ${escapeHtml(c.state)}<br>` +
-      `${escapeHtml(label)}${years.length ? " · " + years.join(", ") : ""}`
-    );
-    bounds.push([coords.lat, coords.lon]);
-  });
-
+  const pending = [];
+  for (const c of coops) {
+    const coords = getKnownCoords(c.town, c.state);
+    if (coords) bounds.push(addCoopPin(c, coords));
+    else pending.push(c);
+  }
   if (bounds.length) {
     coopMapInstance.fitBounds(bounds, { padding: [28, 28], maxZoom: 6 });
+  }
+  if (hint) {
+    const states = new Set(coops.map((c) => c.state).filter(Boolean));
+    hint.textContent = pending.length
+      ? `${coops.length} cooperatives across ${states.size} states — locating ${pending.length} more…`
+      : `${coops.length} cooperative${coops.length === 1 ? "" : "s"} across ${states.size} state${states.size === 1 ? "" : "s"}. Tap a pin for details.`;
+  }
+
+  // Anything left needs a live geocode. Resolve one at a time (rate-limited
+  // inside geocodeTownState) and drop each pin in as it lands, rather than
+  // holding up the whole map until the slowest one finishes.
+  for (const c of pending) {
+    const coords = await geocodeTownState(c.town, c.state);
+    if (coords) {
+      bounds.push(addCoopPin(c, coords));
+      coopMapInstance.fitBounds(bounds, { padding: [28, 28], maxZoom: 6 });
+    }
   }
 
   if (hint) {
