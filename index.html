@@ -762,6 +762,39 @@ const COOP_TOWN_COORDS = {
   "WAKEENEY|KS": { lat: 39.0245, lon: -99.8820 },
   "LANCASTER|OH": { lat: 39.7431, lon: -82.6069 },
   "ROCHESTER|MN": { lat: 44.0143, lon: -92.4786 },
+  "DANVILLE|IN": { lat: 39.75139, lon: -86.49556 },
+  "DEFUNIAK SPRINGS|FL": { lat: 30.71700, lon: -86.11700 },
+  "SUMMERDALE|AL": { lat: 30.48889, lon: -87.69972 },
+  "DADE CITY|FL": { lat: 28.36472, lon: -82.19583 },
+  "ANDALUSIA|AL": { lat: 31.31000, lon: -86.49389 },
+  "MARIETTA|GA": { lat: 33.95333, lon: -84.54056 },
+  "INDIANAPOLIS|IN": { lat: 39.76840, lon: -86.15810 },
+  "MONTICELLO|IN": { lat: 40.74667, lon: -86.76528 },
+  "PARIS|IL": { lat: 39.62500, lon: -87.69167 },
+  "ROCHESTER|IN": { lat: 41.05917, lon: -86.19611 },
+  "WABASH|IN": { lat: 40.80083, lon: -85.82722 },
+  "PERU|IN": { lat: 40.75778, lon: -86.07167 },
+  "GREENFIELD|IN": { lat: 39.79472, lon: -85.75694 },
+  "ROCKVILLE|IN": { lat: 39.76639, lon: -87.22944 },
+  "LINDEN|IN": { lat: 40.18889, lon: -86.90222 },
+  "BLOOMINGTON|IN": { lat: 39.16670, lon: -86.53470 },
+  "MARTINSVILLE|IN": { lat: 39.39306, lon: -86.45417 },
+  "NORTH BALTIMORE|OH": { lat: 41.18028, lon: -83.66944 },
+  "HERNDON|VA": { lat: 38.97139, lon: -77.38861 },
+  "PAXTON|IL": { lat: 40.45417, lon: -88.11250 },
+  "SUMTERVILLE|FL": { lat: 28.74500, lon: -82.06333 },
+  "REIDSVILLE|GA": { lat: 32.08389, lon: -82.12083 },
+  "JEFFERSON|GA": { lat: 34.12667, lon: -83.59028 },
+  "AMERICUS|GA": { lat: 32.07528, lon: -84.22667 },
+  "EUGENE|OR": { lat: 44.05639, lon: -123.11750 },
+  "MANILLA|IN": { lat: 39.57250, lon: -85.62306 },
+  "FRANKLINTON|LA": { lat: 30.85333, lon: -90.13194 },
+  "GREENWELL SPRINGS|LA": { lat: 30.57450, lon: -90.98980 },
+  "BEMIDJI|MN": { lat: 47.48703, lon: -94.88269 },
+  "BENSON|MN": { lat: 45.31528, lon: -95.60583 },
+  "THE DALLES|OR": { lat: 45.60167, lon: -121.18472 },
+  "COWPENS|SC": { lat: 35.01861, lon: -81.80417 },
+  "ST. GEORGE|UT": { lat: 37.10247, lon: -113.57706 },
 };
 
 function coopCoordKey(town, state) {
@@ -938,17 +971,26 @@ async function renderCoopMap(coops) {
   // Anything left needs a live geocode. Resolve one at a time (rate-limited
   // inside geocodeTownState) and drop each pin in as it lands, rather than
   // holding up the whole map until the slowest one finishes.
+  const failed = [];
   for (const c of pending) {
     const coords = await geocodeTownState(c.town, c.state);
     if (coords) {
       bounds.push(addCoopPin(c, coords));
       coopMapInstance.fitBounds(bounds, { padding: [28, 28], maxZoom: 6 });
+    } else {
+      failed.push(c);
     }
   }
 
   if (hint) {
     const states = new Set(coops.map((c) => c.state).filter(Boolean));
-    hint.textContent = `${coops.length} cooperative${coops.length === 1 ? "" : "s"} across ${states.size} state${states.size === 1 ? "" : "s"}. Tap a pin for details.`;
+    let text = `${coops.length} cooperative${coops.length === 1 ? "" : "s"} across ${states.size} state${states.size === 1 ? "" : "s"}. Tap a pin for details.`;
+    if (failed.length) {
+      const names = failed.map((c) => `${c.name} (${c.town}, ${c.state})`).join("; ");
+      text += ` Couldn't place ${failed.length}: ${names}.`;
+      console.warn("Co-op geocoding failed for:", names);
+    }
+    hint.textContent = text;
   }
 }
 
