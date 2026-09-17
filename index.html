@@ -197,7 +197,8 @@ a { color: var(--teal); }
   font-weight: 700;
 }
 
-#airport-map {
+#airport-map,
+#coop-map {
   height: 420px;
   border-radius: 10px;
   overflow: hidden;
@@ -209,6 +210,27 @@ a { color: var(--teal); }
   margin: 10px 2px 0;
   font-size: 12.5px;
   color: var(--slate-dim);
+}
+
+.map-legend {
+  display: flex;
+  gap: 18px;
+  margin: 12px 2px 0;
+}
+
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12.5px;
+  color: var(--slate);
+}
+
+.legend-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  display: inline-block;
 }
 
 .leaflet-popup-content-wrapper,
@@ -587,6 +609,19 @@ a { color: var(--teal); }
     <p class="map-hint">Pin size and color scale with visit count and score. Tap a pin for details.</p>
   </section>
 
+  <section class="map-section">
+    <div class="board-head">
+      <h2>Co-ops I've Worked With</h2>
+      <a class="log-btn" href="https://docs.google.com/forms/d/e/1FAIpQLScj5H7yLJ4POVicC2i3jSHypygFDkxuHuh3JJ7X8booZmX4uA/viewform" target="_blank" rel="noopener">Log a co-op ⚡</a>
+    </div>
+    <div id="coop-map"></div>
+    <div class="map-legend">
+      <span class="legend-item"><span class="legend-dot" style="background:var(--teal)"></span>Visited</span>
+      <span class="legend-item"><span class="legend-dot" style="background:var(--amber)"></span>Consulted</span>
+    </div>
+    <p id="coop-map-hint" class="map-hint">Loading cooperative locations&hellip;</p>
+  </section>
+
   <section class="board-section">
     <div class="board-head">
       <h2>The Board</h2>
@@ -709,6 +744,151 @@ const RESPONSES_CSV_URL =
   "https://docs.google.com/spreadsheets/d/e/2PACX-1vR54CnrLNkh_UuMJ1Hetsu3DhQ0E4vm7B48yazB-ODIQNcV7zXq42U0CWQ5RjaUSXarnB8L4VSPYl81/pub?gid=1090662342&single=true&output=csv";
 const MISC_CSV_URL =
   "https://docs.google.com/spreadsheets/d/e/2PACX-1vR54CnrLNkh_UuMJ1Hetsu3DhQ0E4vm7B48yazB-ODIQNcV7zXq42U0CWQ5RjaUSXarnB8L4VSPYl81/pub?gid=861406056&single=true&output=csv";
+const COOPS_CSV_URL =
+  "https://docs.google.com/spreadsheets/d/e/2PACX-1vR54CnrLNkh_UuMJ1Hetsu3DhQ0E4vm7B48yazB-ODIQNcV7zXq42U0CWQ5RjaUSXarnB8L4VSPYl81/pub?gid=316726175&single=true&output=csv";
+
+// ---- Known co-op HQ town coordinates, keyed by "TOWN|STATE" ----
+// Anything not listed here gets geocoded at runtime (see geocodeTownState)
+// and cached in the visitor's browser, so new towns just work without a
+// code change — add an entry here only if you want it to load instantly.
+const COOP_TOWN_COORDS = {
+  "RUSHFORD|MN": { lat: 43.8125, lon: -91.7514 },
+  "OWENSBORO|KY": { lat: 37.7578, lon: -87.1133 },
+  "NORTH FORT MYERS|FL": { lat: 26.7306, lon: -81.8583 },
+  "HAMMOND|WI": { lat: 44.9997, lon: -92.4261 },
+  "FRIENDSHIP|WI": { lat: 43.9717, lon: -89.8187 },
+  "DUNN|NC": { lat: 35.3114, lon: -78.6128 },
+  "CLARKESVILLE|GA": { lat: 34.6103, lon: -83.5283 },
+  "MOORE HAVEN|FL": { lat: 26.8339, lon: -81.0983 },
+  "FREDERICKSBURG|TX": { lat: 30.2639, lon: -98.8747 },
+  "MUENSTER|TX": { lat: 33.6528, lon: -97.3728 },
+  "WAKEENEY|KS": { lat: 39.0245, lon: -99.8820 },
+  "LANCASTER|OH": { lat: 39.7431, lon: -82.6069 },
+  "ROCHESTER|MN": { lat: 44.0143, lon: -92.4786 },
+};
+
+function coopCoordKey(town, state) {
+  return `${(town || "").trim().toUpperCase()}|${(state || "").trim().toUpperCase()}`;
+}
+
+async function geocodeTownState(town, state) {
+  const key = coopCoordKey(town, state);
+  if (COOP_TOWN_COORDS[key]) return COOP_TOWN_COORDS[key];
+
+  const cacheKey = `gatecheck-coop-geo:${key}`;
+  try {
+    const cached = localStorage.getItem(cacheKey);
+    if (cached) return JSON.parse(cached);
+  } catch (e) {
+    /* localStorage unavailable — just skip the cache */
+  }
+
+  try {
+    const q = encodeURIComponent(`${town}, ${state}, USA`);
+    const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&limit=1&countrycodes=us&q=${q}`);
+    const data = await res.json();
+    if (data && data[0]) {
+      const coords = { lat: parseFloat(data[0].lat), lon: parseFloat(data[0].lon) };
+      try {
+        localStorage.setItem(cacheKey, JSON.stringify(coords));
+      } catch (e) {
+        /* ignore cache write failures */
+      }
+      // Be polite to the free, shared Nominatim service — only pause when
+      // we actually hit the network (cache/static hits return above).
+      await new Promise((r) => setTimeout(r, 300));
+      return coords;
+    }
+  } catch (e) {
+    console.error("Geocode failed for", town, state, e);
+  }
+  return null;
+}
+
+function escapeHtml(s) {
+  return (s || "").replace(/[&<>"']/g, (c) => ({
+    "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;",
+  }[c]));
+}
+
+function buildCoopStats(rows) {
+  const byName = {};
+  for (const row of rows) {
+    const name = (row["Cooperative Name"] || "").trim();
+    if (!name) continue;
+    if (!byName[name]) {
+      byName[name] = {
+        name,
+        town: (row["Cooperative HQ Town"] || "").trim(),
+        state: (row["Cooperative HQ State"] || "").trim(),
+        engagements: [],
+      };
+    }
+    const dateObj = parseTravelDate(row["Date Worked With"]);
+    byName[name].engagements.push({
+      nature: (row["Nature of Work"] || "").trim(),
+      year: dateObj ? dateObj.getFullYear() : null,
+    });
+  }
+  return Object.values(byName).map((c) => ({
+    ...c,
+    visited: c.engagements.some((e) => e.nature.toLowerCase() === "visited"),
+  }));
+}
+
+let coopMapInstance = null;
+
+async function renderCoopMap(coops) {
+  const el = document.getElementById("coop-map");
+  const hint = document.getElementById("coop-map-hint");
+  if (!el || typeof L === "undefined") return;
+
+  const resolved = [];
+  for (const c of coops) {
+    const coords = await geocodeTownState(c.town, c.state);
+    if (coords) resolved.push({ c, coords });
+  }
+
+  if (!coopMapInstance) {
+    coopMapInstance = L.map("coop-map", { scrollWheelZoom: false }).setView([39.5, -98.35], 4);
+    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+      subdomains: "abc",
+      maxZoom: 19,
+    }).addTo(coopMapInstance);
+  }
+
+  const bounds = [];
+  resolved.forEach(({ c, coords }) => {
+    const color = c.visited ? "#5eead4" : "#ffb703";
+    const radius = 6 + Math.min(c.engagements.length, 6) * 1.6;
+    const marker = L.circleMarker([coords.lat, coords.lon], {
+      radius,
+      fillColor: color,
+      fillOpacity: 0.85,
+      color: "#0e1620",
+      weight: 2,
+    }).addTo(coopMapInstance);
+
+    const years = [...new Set(c.engagements.map((e) => e.year).filter(Boolean))].sort();
+    const label = c.visited ? "Visited" : "Consulted";
+    marker.bindPopup(
+      `<strong>${escapeHtml(c.name)}</strong><br>` +
+      `${escapeHtml(c.town)}, ${escapeHtml(c.state)}<br>` +
+      `${label}${years.length ? " · " + years.join(", ") : ""}`
+    );
+    bounds.push([coords.lat, coords.lon]);
+  });
+
+  if (bounds.length) {
+    coopMapInstance.fitBounds(bounds, { padding: [28, 28], maxZoom: 6 });
+  }
+
+  if (hint) {
+    const states = new Set(coops.map((c) => c.state).filter(Boolean));
+    hint.textContent = `${coops.length} cooperative${coops.length === 1 ? "" : "s"} across ${states.size} state${states.size === 1 ? "" : "s"}. Tap a pin for details.`;
+  }
+}
 
 const CATEGORY_DEFS = [
   { key: "Cleanliness", source: "direct", field: "Cleanliness" },
@@ -1088,7 +1268,21 @@ async function boot() {
   }
 }
 
+async function bootCoops() {
+  try {
+    const coopsText = await fetchCSV(COOPS_CSV_URL);
+    const coopRows = rowsToObjects(parseCSV(coopsText));
+    const coops = buildCoopStats(coopRows);
+    await renderCoopMap(coops);
+  } catch (err) {
+    console.error(err);
+    const hint = document.getElementById("coop-map-hint");
+    if (hint) hint.textContent = "Couldn't load cooperative locations right now. Check back in a bit.";
+  }
+}
+
 boot();
+bootCoops();
 </script>
 </body>
 </html>
