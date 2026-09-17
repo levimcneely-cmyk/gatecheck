@@ -615,10 +615,7 @@ a { color: var(--teal); }
       <a class="log-btn" href="https://docs.google.com/forms/d/e/1FAIpQLScj5H7yLJ4POVicC2i3jSHypygFDkxuHuh3JJ7X8booZmX4uA/viewform" target="_blank" rel="noopener">Log a co-op ⚡</a>
     </div>
     <div id="coop-map"></div>
-    <div class="map-legend">
-      <span class="legend-item"><span class="legend-dot" style="background:var(--teal)"></span>Visited</span>
-      <span class="legend-item"><span class="legend-dot" style="background:var(--amber)"></span>Consulted</span>
-    </div>
+    <div id="coop-legend" class="map-legend"></div>
     <p id="coop-map-hint" class="map-hint">Loading cooperative locations&hellip;</p>
   </section>
 
@@ -811,6 +808,23 @@ function escapeHtml(s) {
   }[c]));
 }
 
+// Colors for known "Nature of Work" values, in priority order for picking a
+// pin's dominant color when a co-op has more than one kind of engagement.
+// Anything not listed here still gets a pin — just in a neutral color —
+// so a new category on the form never silently gets mislabeled as one of
+// these.
+const NATURE_COLOR_ORDER = ["Employed", "Visited", "Consulted"];
+const NATURE_COLORS = {
+  Employed: "#fb7185",
+  Visited: "#5eead4",
+  Consulted: "#ffb703",
+};
+const NATURE_DEFAULT_COLOR = "#93a1b5";
+
+function natureColor(nature) {
+  return NATURE_COLORS[nature] || NATURE_DEFAULT_COLOR;
+}
+
 function buildCoopStats(rows) {
   const byName = {};
   for (const row of rows) {
@@ -830,18 +844,39 @@ function buildCoopStats(rows) {
       year: dateObj ? dateObj.getFullYear() : null,
     });
   }
-  return Object.values(byName).map((c) => ({
-    ...c,
-    visited: c.engagements.some((e) => e.nature.toLowerCase() === "visited"),
-  }));
+  return Object.values(byName).map((c) => {
+    const natures = [...new Set(c.engagements.map((e) => e.nature).filter(Boolean))];
+    const primaryNature =
+      NATURE_COLOR_ORDER.find((n) => natures.includes(n)) || natures[0] || "";
+    return { ...c, natures, primaryNature };
+  });
 }
 
 let coopMapInstance = null;
+
+function renderCoopLegend(coops) {
+  const el = document.getElementById("coop-legend");
+  if (!el) return;
+  const present = new Set();
+  coops.forEach((c) => c.natures.forEach((n) => present.add(n)));
+  const ordered = [
+    ...NATURE_COLOR_ORDER.filter((n) => present.has(n)),
+    ...[...present].filter((n) => !NATURE_COLOR_ORDER.includes(n)).sort(),
+  ];
+  el.innerHTML = ordered
+    .map(
+      (n) =>
+        `<span class="legend-item"><span class="legend-dot" style="background:${natureColor(n)}"></span>${escapeHtml(n)}</span>`
+    )
+    .join("");
+}
 
 async function renderCoopMap(coops) {
   const el = document.getElementById("coop-map");
   const hint = document.getElementById("coop-map-hint");
   if (!el || typeof L === "undefined") return;
+
+  renderCoopLegend(coops);
 
   const resolved = [];
   for (const c of coops) {
@@ -860,7 +895,7 @@ async function renderCoopMap(coops) {
 
   const bounds = [];
   resolved.forEach(({ c, coords }) => {
-    const color = c.visited ? "#5eead4" : "#ffb703";
+    const color = natureColor(c.primaryNature);
     const radius = 6 + Math.min(c.engagements.length, 6) * 1.6;
     const marker = L.circleMarker([coords.lat, coords.lon], {
       radius,
@@ -871,11 +906,11 @@ async function renderCoopMap(coops) {
     }).addTo(coopMapInstance);
 
     const years = [...new Set(c.engagements.map((e) => e.year).filter(Boolean))].sort();
-    const label = c.visited ? "Visited" : "Consulted";
+    const label = c.natures.join(", ") || "Unknown";
     marker.bindPopup(
       `<strong>${escapeHtml(c.name)}</strong><br>` +
       `${escapeHtml(c.town)}, ${escapeHtml(c.state)}<br>` +
-      `${label}${years.length ? " · " + years.join(", ") : ""}`
+      `${escapeHtml(label)}${years.length ? " · " + years.join(", ") : ""}`
     );
     bounds.push([coords.lat, coords.lon]);
   });
