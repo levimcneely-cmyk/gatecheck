@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -329,7 +328,87 @@ a { color: var(--teal); }
   text-transform: uppercase;
 }
 
+.coop-columns {
+  grid-template-columns: 1fr 110px 64px;
+}
+
 .board-body { border-top: 1px solid var(--navy-700); }
+
+.coop-row {
+  display: grid;
+  grid-template-columns: 1fr 110px 64px;
+  gap: 12px;
+  align-items: center;
+  width: 100%;
+  padding: 14px 16px;
+  background: var(--navy-900);
+  border: none;
+  border-bottom: 1px solid var(--navy-800);
+  color: inherit;
+  font: inherit;
+  text-align: left;
+}
+
+.coop-row .coop-name {
+  font-size: 14px;
+  font-weight: 500;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.coop-type-badge {
+  display: inline-block;
+  font-family: var(--font-display);
+  font-size: 11.5px;
+  font-weight: 700;
+  padding: 4px 9px;
+  border-radius: 999px;
+  color: var(--navy-950);
+  background: var(--badge-color, var(--slate));
+  text-align: center;
+}
+
+.coop-row .coop-year {
+  font-family: var(--font-display);
+  color: var(--slate);
+  font-size: 13px;
+}
+
+.pager {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  padding: 16px 0 4px;
+}
+
+.pager-btn {
+  background: var(--navy-800);
+  color: var(--cream);
+  border: 1px solid var(--navy-600);
+  border-radius: 7px;
+  padding: 7px 14px;
+  font-family: var(--font-display);
+  font-size: 13px;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.pager-btn:hover:not(:disabled) { background: var(--navy-700); }
+
+.pager-btn:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+.pager-label {
+  font-family: var(--font-display);
+  font-size: 12.5px;
+  color: var(--slate);
+  min-width: 70px;
+  text-align: center;
+}
 
 .board-row {
   display: grid;
@@ -560,6 +639,8 @@ a { color: var(--teal); }
   .col-visits { display: none; }
   .breakdown-row { grid-template-columns: 100px 1fr 30px; }
   .flight-log-row { grid-template-columns: 78px 1fr 1fr; font-size: 11.5px; }
+  .coop-row { grid-template-columns: 1fr 90px; }
+  .coop-row .coop-year { display: none; }
   .site-footer .wrap { flex-direction: column; align-items: flex-start; }
 }
 </style>
@@ -604,7 +685,10 @@ a { color: var(--teal); }
   </section>
 
   <section class="map-section">
-    <h2>Where I've Been</h2>
+    <div class="board-head">
+      <h2>Where I've Been</h2>
+      <a class="log-btn" href="https://forms.gle/p8MTYvcDFLPehHbJA" target="_blank" rel="noopener">Log a flight ✈</a>
+    </div>
     <div id="airport-map"></div>
     <p class="map-hint">Pin size and color scale with visit count and score. Tap a pin for details.</p>
   </section>
@@ -622,7 +706,6 @@ a { color: var(--teal); }
   <section class="board-section">
     <div class="board-head">
       <h2>The Board</h2>
-      <a class="log-btn" href="https://forms.gle/p8MTYvcDFLPehHbJA" target="_blank" rel="noopener">Log a flight ✈</a>
     </div>
 
     <div class="board-columns" aria-hidden="true">
@@ -635,6 +718,24 @@ a { color: var(--teal); }
     <div id="board-body" class="board-body">
       <p class="loading-msg">Pulling the flight log&hellip;</p>
     </div>
+    <div id="board-pager" class="pager"></div>
+  </section>
+
+  <section class="board-section">
+    <div class="board-head">
+      <h2>Co-op Log</h2>
+    </div>
+
+    <div class="board-columns coop-columns" aria-hidden="true">
+      <span class="col-coop-name">Co-op</span>
+      <span class="col-coop-type">Type</span>
+      <span class="col-coop-year">Year</span>
+    </div>
+
+    <div id="coop-board-body" class="board-body">
+      <p class="loading-msg">Pulling the co-op log&hellip;</p>
+    </div>
+    <div id="coop-board-pager" class="pager"></div>
   </section>
 
   <section class="method">
@@ -728,6 +829,95 @@ const AIRPORTS = {
   BOI: { name: "Boise Airport", city: "Boise", state: "ID", lat: 43.5644, lon: -116.2228 },
   MSN: { name: "Dane County Regional Airport", city: "Madison", state: "WI", lat: 43.1399, lon: -89.3375 },
   GRB: { name: "Green Bay-Austin Straubel International Airport", city: "Green Bay", state: "WI", lat: 44.4851, lon: -88.1296 },
+  MEM: { name: "Memphis International Airport", city: "Memphis", state: "TN", lat: 35.0424, lon: -89.9767 },
+  RIC: { name: "Richmond International Airport", city: "Richmond", state: "VA", lat: 37.5052, lon: -77.3197 },
+  ORF: { name: "Norfolk International Airport", city: "Norfolk", state: "VA", lat: 36.8946, lon: -76.2012 },
+  ROA: { name: "Roanoke-Blacksburg Regional Airport", city: "Roanoke", state: "VA", lat: 37.3255, lon: -79.9754 },
+  ILM: { name: "Wilmington International Airport", city: "Wilmington", state: "NC", lat: 34.2706, lon: -77.9026 },
+  AGS: { name: "Augusta Regional Airport", city: "Augusta", state: "GA", lat: 33.3699, lon: -81.9645 },
+  TLH: { name: "Tallahassee International Airport", city: "Tallahassee", state: "FL", lat: 30.3965, lon: -84.3503 },
+  GNV: { name: "Gainesville Regional Airport", city: "Gainesville", state: "FL", lat: 29.6900, lon: -82.2718 },
+  PBI: { name: "Palm Beach International Airport", city: "West Palm Beach", state: "FL", lat: 26.6832, lon: -80.0956 },
+  EYW: { name: "Key West International Airport", city: "Key West", state: "FL", lat: 24.5561, lon: -81.7596 },
+  PGD: { name: "Punta Gorda Airport", city: "Punta Gorda", state: "FL", lat: 26.9200, lon: -81.9905 },
+  SGF: { name: "Springfield-Branson National Airport", city: "Springfield", state: "MO", lat: 37.2457, lon: -93.3886 },
+  TUL: { name: "Tulsa International Airport", city: "Tulsa", state: "OK", lat: 36.1984, lon: -95.8881 },
+  OKC: { name: "Will Rogers World Airport", city: "Oklahoma City", state: "OK", lat: 35.3931, lon: -97.6007 },
+  LIT: { name: "Bill and Hillary Clinton National Airport", city: "Little Rock", state: "AR", lat: 34.7294, lon: -92.2243 },
+  XNA: { name: "Northwest Arkansas National Airport", city: "Bentonville", state: "AR", lat: 36.2819, lon: -94.3068 },
+  SHV: { name: "Shreveport Regional Airport", city: "Shreveport", state: "LA", lat: 32.4466, lon: -93.8256 },
+  MSY: { name: "Louis Armstrong New Orleans International Airport", city: "New Orleans", state: "LA", lat: 29.9934, lon: -90.2580 },
+  BTR: { name: "Baton Rouge Metropolitan Airport", city: "Baton Rouge", state: "LA", lat: 30.5332, lon: -91.1496 },
+  LFT: { name: "Lafayette Regional Airport", city: "Lafayette", state: "LA", lat: 30.2053, lon: -91.9876 },
+  MOB: { name: "Mobile Regional Airport", city: "Mobile", state: "AL", lat: 30.6912, lon: -88.2428 },
+  MGM: { name: "Montgomery Regional Airport", city: "Montgomery", state: "AL", lat: 32.3006, lon: -86.3939 },
+  DHN: { name: "Dothan Regional Airport", city: "Dothan", state: "AL", lat: 31.3213, lon: -85.4496 },
+  CSG: { name: "Columbus Metropolitan Airport", city: "Columbus", state: "GA", lat: 32.5163, lon: -84.9388 },
+  ABE: { name: "Lehigh Valley International Airport", city: "Allentown", state: "PA", lat: 40.6521, lon: -75.4408 },
+  MDT: { name: "Harrisburg International Airport", city: "Harrisburg", state: "PA", lat: 40.1935, lon: -76.7634 },
+  AVP: { name: "Wilkes-Barre/Scranton International Airport", city: "Avoca", state: "PA", lat: 41.3385, lon: -75.7233 },
+  ERI: { name: "Erie International Airport", city: "Erie", state: "PA", lat: 42.0831, lon: -80.1739 },
+  IAD: { name: "Washington Dulles International Airport", city: "Dulles", state: "VA", lat: 38.9531, lon: -77.4565 },
+  DCA: { name: "Ronald Reagan Washington National Airport", city: "Arlington", state: "VA", lat: 38.8512, lon: -77.0402 },
+  ACY: { name: "Atlantic City International Airport", city: "Egg Harbor Township", state: "NJ", lat: 39.4576, lon: -74.5772 },
+  ALB: { name: "Albany International Airport", city: "Albany", state: "NY", lat: 42.7483, lon: -73.8017 },
+  SYR: { name: "Syracuse Hancock International Airport", city: "Syracuse", state: "NY", lat: 43.1112, lon: -76.1063 },
+  ROC: { name: "Greater Rochester International Airport", city: "Rochester", state: "NY", lat: 43.1189, lon: -77.6724 },
+  BUF: { name: "Buffalo Niagara International Airport", city: "Buffalo", state: "NY", lat: 42.9405, lon: -78.7322 },
+  ITH: { name: "Ithaca Tompkins International Airport", city: "Ithaca", state: "NY", lat: 42.4909, lon: -76.4584 },
+  PVD: { name: "T.F. Green International Airport", city: "Providence", state: "RI", lat: 41.7240, lon: -71.4283 },
+  BDL: { name: "Bradley International Airport", city: "Windsor Locks", state: "CT", lat: 41.9389, lon: -72.6832 },
+  MHT: { name: "Manchester-Boston Regional Airport", city: "Manchester", state: "NH", lat: 42.9326, lon: -71.4357 },
+  PWM: { name: "Portland International Jetport", city: "Portland", state: "ME", lat: 43.6462, lon: -70.3093 },
+  BGR: { name: "Bangor International Airport", city: "Bangor", state: "ME", lat: 44.8074, lon: -68.8281 },
+  BTV: { name: "Burlington International Airport", city: "South Burlington", state: "VT", lat: 44.4719, lon: -73.1533 },
+  AVL: { name: "Asheville Regional Airport", city: "Asheville", state: "NC", lat: 35.4362, lon: -82.5418 },
+  FAY: { name: "Fayetteville Regional Airport", city: "Fayetteville", state: "NC", lat: 34.9912, lon: -78.8803 },
+  PIA: { name: "Peoria International Airport", city: "Peoria", state: "IL", lat: 40.6642, lon: -89.6933 },
+  BMI: { name: "Central Illinois Regional Airport", city: "Bloomington", state: "IL", lat: 40.4771, lon: -88.9159 },
+  CMI: { name: "University of Illinois Willard Airport", city: "Savoy", state: "IL", lat: 40.0392, lon: -88.2781 },
+  SPI: { name: "Abraham Lincoln Capital Airport", city: "Springfield", state: "IL", lat: 39.8441, lon: -89.6779 },
+  RFD: { name: "Chicago Rockford International Airport", city: "Rockford", state: "IL", lat: 42.1954, lon: -89.0972 },
+  MLI: { name: "Quad City International Airport", city: "Moline", state: "IL", lat: 41.4485, lon: -90.5075 },
+  DBQ: { name: "Dubuque Regional Airport", city: "Dubuque", state: "IA", lat: 42.4021, lon: -90.7093 },
+  CID: { name: "Eastern Iowa Airport", city: "Cedar Rapids", state: "IA", lat: 41.8847, lon: -91.7108 },
+  FSD: { name: "Sioux Falls Regional Airport", city: "Sioux Falls", state: "SD", lat: 43.5820, lon: -96.7419 },
+  RAP: { name: "Rapid City Regional Airport", city: "Rapid City", state: "SD", lat: 44.0453, lon: -103.0574 },
+  BIS: { name: "Bismarck Municipal Airport", city: "Bismarck", state: "ND", lat: 46.7727, lon: -100.7467 },
+  FAR: { name: "Hector International Airport", city: "Fargo", state: "ND", lat: 46.9207, lon: -96.8158 },
+  DLH: { name: "Duluth International Airport", city: "Duluth", state: "MN", lat: 46.8420, lon: -92.1936 },
+  STC: { name: "St. Cloud Regional Airport", city: "St. Cloud", state: "MN", lat: 45.5468, lon: -94.0599 },
+  EAU: { name: "Chippewa Valley Regional Airport", city: "Eau Claire", state: "WI", lat: 44.8658, lon: -91.4843 },
+  LSE: { name: "La Crosse Regional Airport", city: "La Crosse", state: "WI", lat: 43.8790, lon: -91.2568 },
+  CWA: { name: "Central Wisconsin Airport", city: "Mosinee", state: "WI", lat: 44.7776, lon: -89.6668 },
+  ATW: { name: "Appleton International Airport", city: "Appleton", state: "WI", lat: 44.2581, lon: -88.5190 },
+  FLG: { name: "Flagstaff Pulliam Airport", city: "Flagstaff", state: "AZ", lat: 35.1385, lon: -111.6710 },
+  YUM: { name: "Yuma International Airport", city: "Yuma", state: "AZ", lat: 32.6566, lon: -114.6060 },
+  PSP: { name: "Palm Springs International Airport", city: "Palm Springs", state: "CA", lat: 33.8297, lon: -116.5070 },
+  ONT: { name: "Ontario International Airport", city: "Ontario", state: "CA", lat: 34.0560, lon: -117.6012 },
+  BUR: { name: "Hollywood Burbank Airport", city: "Burbank", state: "CA", lat: 34.2007, lon: -118.3587 },
+  SNA: { name: "John Wayne Airport", city: "Santa Ana", state: "CA", lat: 33.6757, lon: -117.8682 },
+  LGB: { name: "Long Beach Airport", city: "Long Beach", state: "CA", lat: 33.8177, lon: -118.1516 },
+  SBA: { name: "Santa Barbara Airport", city: "Santa Barbara", state: "CA", lat: 34.4262, lon: -119.8415 },
+  SMF: { name: "Sacramento International Airport", city: "Sacramento", state: "CA", lat: 38.6954, lon: -121.5908 },
+  OAK: { name: "Oakland International Airport", city: "Oakland", state: "CA", lat: 37.7126, lon: -122.2197 },
+  SJC: { name: "San Jose International Airport", city: "San Jose", state: "CA", lat: 37.3639, lon: -121.9289 },
+  FAT: { name: "Fresno Yosemite International Airport", city: "Fresno", state: "CA", lat: 36.7762, lon: -119.7181 },
+  MRY: { name: "Monterey Regional Airport", city: "Monterey", state: "CA", lat: 36.5870, lon: -121.8429 },
+  MFR: { name: "Rogue Valley International Airport", city: "Medford", state: "OR", lat: 42.3742, lon: -122.8735 },
+  EUG: { name: "Eugene Airport", city: "Eugene", state: "OR", lat: 44.1246, lon: -123.2119 },
+  RDM: { name: "Redmond Municipal Airport", city: "Redmond", state: "OR", lat: 44.2541, lon: -121.1500 },
+  TWF: { name: "Joslin Field - Magic Valley Regional Airport", city: "Twin Falls", state: "ID", lat: 42.4818, lon: -114.4879 },
+  IDA: { name: "Idaho Falls Regional Airport", city: "Idaho Falls", state: "ID", lat: 43.5146, lon: -112.0708 },
+  MSO: { name: "Missoula Montana Airport", city: "Missoula", state: "MT", lat: 46.9163, lon: -114.0906 },
+  BZN: { name: "Bozeman Yellowstone International Airport", city: "Bozeman", state: "MT", lat: 45.7776, lon: -111.1530 },
+  GTF: { name: "Great Falls International Airport", city: "Great Falls", state: "MT", lat: 47.4820, lon: -111.3705 },
+  BIL: { name: "Billings Logan International Airport", city: "Billings", state: "MT", lat: 45.8077, lon: -108.5429 },
+  JAC: { name: "Jackson Hole Airport", city: "Jackson", state: "WY", lat: 43.6073, lon: -110.7377 },
+  CYS: { name: "Cheyenne Regional Airport", city: "Cheyenne", state: "WY", lat: 41.1557, lon: -104.8117 },
+  GEG: { name: "Spokane International Airport", city: "Spokane", state: "WA", lat: 47.6198, lon: -117.5336 },
+  YKM: { name: "Yakima Air Terminal", city: "Yakima", state: "WA", lat: 46.5682, lon: -120.5442 },
+  BLI: { name: "Bellingham International Airport", city: "Bellingham", state: "WA", lat: 48.7928, lon: -122.5375 },
 };
 
 
@@ -1223,11 +1413,35 @@ function renderMethodology(weightMap) {
   }
 }
 
-function renderBoard(airports) {
+const PAGE_SIZE = 10;
+
+function renderPager(containerId, totalItems, currentPage, onPageChange) {
+  const el = document.getElementById(containerId);
+  if (!el) return;
+  const totalPages = Math.max(1, Math.ceil(totalItems / PAGE_SIZE));
+  if (totalPages <= 1) {
+    el.innerHTML = "";
+    return;
+  }
+  el.innerHTML = `
+    <button class="pager-btn" id="${containerId}-prev" ${currentPage === 0 ? "disabled" : ""}>&larr; Prev</button>
+    <span class="pager-label">Page ${currentPage + 1} of ${totalPages}</span>
+    <button class="pager-btn" id="${containerId}-next" ${currentPage >= totalPages - 1 ? "disabled" : ""}>Next &rarr;</button>
+  `;
+  document.getElementById(`${containerId}-prev`).addEventListener("click", () => onPageChange(currentPage - 1));
+  document.getElementById(`${containerId}-next`).addEventListener("click", () => onPageChange(currentPage + 1));
+}
+
+function renderBoard(airports, page) {
+  page = page || 0;
   const body = document.getElementById("board-body");
   body.innerHTML = "";
 
-  airports.forEach((a, idx) => {
+  const start = page * PAGE_SIZE;
+  const pageItems = airports.slice(start, start + PAGE_SIZE);
+
+  pageItems.forEach((a, i) => {
+    const idx = start + i;
     const info = getAirportInfo(a.code);
     const rank = idx + 1;
     const color = scoreColor(a.totalPct);
@@ -1296,6 +1510,60 @@ function renderBoard(airports) {
 
     body.appendChild(row);
     body.appendChild(detail);
+  });
+
+  renderPager("board-pager", airports.length, page, (p) => {
+    renderBoard(airports, p);
+    document.getElementById("board-body").scrollIntoView({ behavior: "smooth", block: "start" });
+  });
+}
+
+function buildCoopEngagements(rows) {
+  const list = [];
+  for (const row of rows) {
+    const name = (row["Cooperative Name"] || "").trim();
+    if (!name) continue;
+    const date = parseTravelDate(row["Date Worked With"]);
+    list.push({
+      name,
+      nature: (row["Nature of Work"] || "").trim(),
+      date,
+      year: date ? date.getFullYear() : null,
+    });
+  }
+  list.sort((a, b) => (b.date || 0) - (a.date || 0));
+  return list;
+}
+
+function renderCoopBoard(engagements, page) {
+  page = page || 0;
+  const body = document.getElementById("coop-board-body");
+  if (!body) return;
+  body.innerHTML = "";
+
+  if (!engagements.length) {
+    body.innerHTML = '<p class="loading-msg">No co-op engagements logged yet.</p>';
+    return;
+  }
+
+  const start = page * PAGE_SIZE;
+  const pageItems = engagements.slice(start, start + PAGE_SIZE);
+
+  pageItems.forEach((e) => {
+    const color = natureColor(e.nature);
+    const row = document.createElement("div");
+    row.className = "coop-row";
+    row.innerHTML = `
+      <span class="coop-name">${escapeHtml(e.name)}</span>
+      <span><span class="coop-type-badge" style="--badge-color:${color}">${escapeHtml(e.nature || "Unknown")}</span></span>
+      <span class="coop-year">${e.year || "–"}</span>
+    `;
+    body.appendChild(row);
+  });
+
+  renderPager("coop-board-pager", engagements.length, page, (p) => {
+    renderCoopBoard(engagements, p);
+    document.getElementById("coop-board-body").scrollIntoView({ behavior: "smooth", block: "start" });
   });
 }
 
@@ -1377,11 +1645,14 @@ async function bootCoops() {
     const coopsText = await fetchCSV(COOPS_CSV_URL);
     const coopRows = rowsToObjects(parseCSV(coopsText));
     const coops = buildCoopStats(coopRows);
+    renderCoopBoard(buildCoopEngagements(coopRows));
     await renderCoopMap(coops);
   } catch (err) {
     console.error(err);
     const hint = document.getElementById("coop-map-hint");
     if (hint) hint.textContent = "Couldn't load cooperative locations right now. Check back in a bit.";
+    const boardBody = document.getElementById("coop-board-body");
+    if (boardBody) boardBody.innerHTML = '<p class="loading-msg">Couldn\'t load the co-op log right now. Check back in a bit.</p>';
   }
 }
 
