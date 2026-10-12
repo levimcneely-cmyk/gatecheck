@@ -918,6 +918,91 @@ const AIRPORTS = {
   GEG: { name: "Spokane International Airport", city: "Spokane", state: "WA", lat: 47.6198, lon: -117.5336 },
   YKM: { name: "Yakima Air Terminal", city: "Yakima", state: "WA", lat: 46.5682, lon: -120.5442 },
   BLI: { name: "Bellingham International Airport", city: "Bellingham", state: "WA", lat: 48.7928, lon: -122.5375 },
+  // ---- International (state field holds the country) ----
+  YYZ: { name: "Toronto Pearson International Airport", city: "Toronto", state: "Canada", lat: 43.6777, lon: -79.6248 },
+  YUL: { name: "Montréal-Trudeau International Airport", city: "Montréal", state: "Canada", lat: 45.4706, lon: -73.7408 },
+  YVR: { name: "Vancouver International Airport", city: "Vancouver", state: "Canada", lat: 49.1947, lon: -123.1792 },
+  YYC: { name: "Calgary International Airport", city: "Calgary", state: "Canada", lat: 51.1139, lon: -114.0203 },
+  YOW: { name: "Ottawa Macdonald-Cartier International Airport", city: "Ottawa", state: "Canada", lat: 45.3225, lon: -75.6692 },
+  MEX: { name: "Mexico City International Airport", city: "Mexico City", state: "Mexico", lat: 19.4361, lon: -99.0719 },
+  CUN: { name: "Cancún International Airport", city: "Cancún", state: "Mexico", lat: 21.0365, lon: -86.8771 },
+  SJD: { name: "Los Cabos International Airport", city: "San José del Cabo", state: "Mexico", lat: 23.1518, lon: -109.7211 },
+  PVR: { name: "Licenciado Gustavo Díaz Ordaz International Airport", city: "Puerto Vallarta", state: "Mexico", lat: 20.6801, lon: -105.2544 },
+  GDL: { name: "Guadalajara International Airport", city: "Guadalajara", state: "Mexico", lat: 20.5218, lon: -103.3111 },
+  NAS: { name: "Lynden Pindling International Airport", city: "Nassau", state: "Bahamas", lat: 25.0390, lon: -77.4662 },
+  SJU: { name: "Luis Muñoz Marín International Airport", city: "San Juan", state: "Puerto Rico", lat: 18.4394, lon: -66.0018 },
+  PUJ: { name: "Punta Cana International Airport", city: "Punta Cana", state: "Dominican Republic", lat: 18.5674, lon: -68.3634 },
+  MBJ: { name: "Sangster International Airport", city: "Montego Bay", state: "Jamaica", lat: 18.5037, lon: -77.9134 },
+  AUA: { name: "Queen Beatrix International Airport", city: "Oranjestad", state: "Aruba", lat: 12.5014, lon: -70.0152 },
+  SJO: { name: "Juan Santamaría International Airport", city: "San José", state: "Costa Rica", lat: 9.9939, lon: -84.2088 },
+  PTY: { name: "Tocumen International Airport", city: "Panama City", state: "Panama", lat: 9.0714, lon: -79.3835 },
+  BOG: { name: "El Dorado International Airport", city: "Bogotá", state: "Colombia", lat: 4.7016, lon: -74.1469 },
+  LIM: { name: "Jorge Chávez International Airport", city: "Lima", state: "Peru", lat: -12.0219, lon: -77.1143 },
+  SCL: { name: "Arturo Merino Benítez International Airport", city: "Santiago", state: "Chile", lat: -33.3930, lon: -70.7858 },
+  EZE: { name: "Ministro Pistarini International Airport", city: "Buenos Aires", state: "Argentina", lat: -34.8222, lon: -58.5358 },
+  GRU: { name: "São Paulo/Guarulhos International Airport", city: "São Paulo", state: "Brazil", lat: -23.4356, lon: -46.4731 },
+  GIG: { name: "Rio de Janeiro/Galeão International Airport", city: "Rio de Janeiro", state: "Brazil", lat: -22.8100, lon: -43.2506 },
+  LHR: { name: "London Heathrow Airport", city: "London", state: "UK", lat: 51.4700, lon: -0.4543 },
+  LGW: { name: "London Gatwick Airport", city: "London", state: "UK", lat: 51.1537, lon: -0.1821 },
+  MAN: { name: "Manchester Airport", city: "Manchester", state: "UK", lat: 53.3537, lon: -2.2750 },
+  EDI: { name: "Edinburgh Airport", city: "Edinburgh", state: "UK", lat: 55.9500, lon: -3.3725 },
+  DUB: { name: "Dublin Airport", city: "Dublin", state: "Ireland", lat: 53.4264, lon: -6.2499 },
+  SNN: { name: "Shannon Airport", city: "Shannon", state: "Ireland", lat: 52.7020, lon: -8.9248 },
+  KEF: { name: "Keflavík International Airport", city: "Reykjavík", state: "Iceland", lat: 63.9850, lon: -22.6056 },
+  CDG: { name: "Paris Charles de Gaulle Airport", city: "Paris", state: "France", lat: 49.0097, lon: 2.5479 },
+  ORY: { name: "Paris Orly Airport", city: "Paris", state: "France", lat: 48.7262, lon: 2.3652 },
+  NCE: { name: "Nice Côte d'Azur Airport", city: "Nice", state: "France", lat: 43.6584, lon: 7.2159 },
+  AMS: { name: "Amsterdam Airport Schiphol", city: "Amsterdam", state: "Netherlands", lat: 52.3105, lon: 4.7683 },
+  BRU: { name: "Brussels Airport", city: "Brussels", state: "Belgium", lat: 50.9014, lon: 4.4844 },
+  FRA: { name: "Frankfurt Airport", city: "Frankfurt", state: "Germany", lat: 50.0379, lon: 8.5622 },
+  MUC: { name: "Munich Airport", city: "Munich", state: "Germany", lat: 48.3538, lon: 11.7861 },
+  BER: { name: "Berlin Brandenburg Airport", city: "Berlin", state: "Germany", lat: 52.3667, lon: 13.5033 },
+  ZRH: { name: "Zurich Airport", city: "Zurich", state: "Switzerland", lat: 47.4647, lon: 8.5492 },
+  GVA: { name: "Geneva Airport", city: "Geneva", state: "Switzerland", lat: 46.2381, lon: 6.1089 },
+  VIE: { name: "Vienna International Airport", city: "Vienna", state: "Austria", lat: 48.1103, lon: 16.5697 },
+  MAD: { name: "Adolfo Suárez Madrid–Barajas Airport", city: "Madrid", state: "Spain", lat: 40.4983, lon: -3.5676 },
+  BCN: { name: "Barcelona–El Prat Airport", city: "Barcelona", state: "Spain", lat: 41.2974, lon: 2.0833 },
+  LIS: { name: "Humberto Delgado Airport", city: "Lisbon", state: "Portugal", lat: 38.7742, lon: -9.1342 },
+  OPO: { name: "Francisco Sá Carneiro Airport", city: "Porto", state: "Portugal", lat: 41.2481, lon: -8.6814 },
+  FCO: { name: "Rome Fiumicino Airport", city: "Rome", state: "Italy", lat: 41.8003, lon: 12.2389 },
+  MXP: { name: "Milan Malpensa Airport", city: "Milan", state: "Italy", lat: 45.6306, lon: 8.7281 },
+  VCE: { name: "Venice Marco Polo Airport", city: "Venice", state: "Italy", lat: 45.5053, lon: 12.3519 },
+  ATH: { name: "Athens International Airport", city: "Athens", state: "Greece", lat: 37.9364, lon: 23.9445 },
+  IST: { name: "Istanbul Airport", city: "Istanbul", state: "Türkiye", lat: 41.2753, lon: 28.7519 },
+  CPH: { name: "Copenhagen Airport", city: "Copenhagen", state: "Denmark", lat: 55.6181, lon: 12.6561 },
+  ARN: { name: "Stockholm Arlanda Airport", city: "Stockholm", state: "Sweden", lat: 59.6519, lon: 17.9186 },
+  OSL: { name: "Oslo Gardermoen Airport", city: "Oslo", state: "Norway", lat: 60.1939, lon: 11.1004 },
+  HEL: { name: "Helsinki-Vantaa Airport", city: "Helsinki", state: "Finland", lat: 60.3172, lon: 24.9633 },
+  PRG: { name: "Václav Havel Airport Prague", city: "Prague", state: "Czechia", lat: 50.1008, lon: 14.2600 },
+  WAW: { name: "Warsaw Chopin Airport", city: "Warsaw", state: "Poland", lat: 52.1657, lon: 20.9671 },
+  BUD: { name: "Budapest Ferenc Liszt International Airport", city: "Budapest", state: "Hungary", lat: 47.4369, lon: 19.2556 },
+  TLV: { name: "Ben Gurion Airport", city: "Tel Aviv", state: "Israel", lat: 32.0114, lon: 34.8867 },
+  CAI: { name: "Cairo International Airport", city: "Cairo", state: "Egypt", lat: 30.1219, lon: 31.4056 },
+  DXB: { name: "Dubai International Airport", city: "Dubai", state: "UAE", lat: 25.2532, lon: 55.3657 },
+  AUH: { name: "Zayed International Airport", city: "Abu Dhabi", state: "UAE", lat: 24.4330, lon: 54.6511 },
+  KTM: { name: "Tribhuvan International Airport", city: "Kathmandu", state: "Nepal", lat: 27.6966, lon: 85.3591 },
+  KEP: { name: "Nepalgunj Airport", city: "Nepalgunj", state: "Nepal", lat: 28.1036, lon: 81.6670 },
+  DOH: { name: "Hamad International Airport", city: "Doha", state: "Qatar", lat: 25.2731, lon: 51.6081 },
+  JNB: { name: "O. R. Tambo International Airport", city: "Johannesburg", state: "South Africa", lat: -26.1392, lon: 28.2460 },
+  CPT: { name: "Cape Town International Airport", city: "Cape Town", state: "South Africa", lat: -33.9715, lon: 18.6021 },
+  NBO: { name: "Jomo Kenyatta International Airport", city: "Nairobi", state: "Kenya", lat: -1.3192, lon: 36.9278 },
+  DEL: { name: "Indira Gandhi International Airport", city: "Delhi", state: "India", lat: 28.5562, lon: 77.1000 },
+  BOM: { name: "Chhatrapati Shivaji Maharaj International Airport", city: "Mumbai", state: "India", lat: 19.0896, lon: 72.8656 },
+  BKK: { name: "Suvarnabhumi Airport", city: "Bangkok", state: "Thailand", lat: 13.6900, lon: 100.7501 },
+  SIN: { name: "Singapore Changi Airport", city: "Singapore", state: "Singapore", lat: 1.3644, lon: 103.9915 },
+  KUL: { name: "Kuala Lumpur International Airport", city: "Kuala Lumpur", state: "Malaysia", lat: 2.7456, lon: 101.7099 },
+  HKG: { name: "Hong Kong International Airport", city: "Hong Kong", state: "Hong Kong", lat: 22.3080, lon: 113.9185 },
+  TPE: { name: "Taiwan Taoyuan International Airport", city: "Taipei", state: "Taiwan", lat: 25.0777, lon: 121.2330 },
+  PEK: { name: "Beijing Capital International Airport", city: "Beijing", state: "China", lat: 40.0799, lon: 116.6031 },
+  PVG: { name: "Shanghai Pudong International Airport", city: "Shanghai", state: "China", lat: 31.1443, lon: 121.8083 },
+  ICN: { name: "Incheon International Airport", city: "Seoul", state: "South Korea", lat: 37.4602, lon: 126.4407 },
+  NRT: { name: "Narita International Airport", city: "Tokyo", state: "Japan", lat: 35.7720, lon: 140.3929 },
+  HND: { name: "Tokyo Haneda Airport", city: "Tokyo", state: "Japan", lat: 35.5494, lon: 139.7798 },
+  KIX: { name: "Kansai International Airport", city: "Osaka", state: "Japan", lat: 34.4347, lon: 135.2440 },
+  MNL: { name: "Ninoy Aquino International Airport", city: "Manila", state: "Philippines", lat: 14.5086, lon: 121.0194 },
+  SYD: { name: "Sydney Kingsford Smith Airport", city: "Sydney", state: "Australia", lat: -33.9461, lon: 151.1772 },
+  MEL: { name: "Melbourne Airport", city: "Melbourne", state: "Australia", lat: -37.6690, lon: 144.8410 },
+  AKL: { name: "Auckland Airport", city: "Auckland", state: "New Zealand", lat: -37.0082, lon: 174.7850 },
 };
 
 
@@ -1578,7 +1663,7 @@ function renderMap(airports) {
     .filter((p) => typeof p.info.lat === "number" && typeof p.info.lon === "number");
 
   if (!mapInstance) {
-    mapInstance = L.map("airport-map", { scrollWheelZoom: false }).setView([39.5, -98.35], 4);
+    mapInstance = L.map("airport-map", { scrollWheelZoom: false, minZoom: 2, worldCopyJump: true }).setView([39.5, -98.35], 4);
     L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
       attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
       subdomains: "abc",
@@ -1604,8 +1689,31 @@ function renderMap(airports) {
     bounds.push([info.lat, info.lon]);
   });
 
-  if (bounds.length) {
-    mapInstance.fitBounds(bounds, { padding: [28, 28], maxZoom: 6 });
+  // Default extent stays on the continental US; international pins are a pan/zoom (or "All") away.
+  const US_BOUNDS = [[24.5, -125], [49.5, -66.5]];
+  mapInstance.fitBounds(US_BOUNDS, { padding: [10, 10] });
+  window.__allPinBounds = bounds;
+  if (!window.__mapCtl) {
+    const Ctl = L.Control.extend({
+      options: { position: "topright" },
+      onAdd() {
+        const wrap = L.DomUtil.create("div", "leaflet-bar");
+        const mk = (label, title, fn) => {
+          const b = L.DomUtil.create("a", "", wrap);
+          b.href = "#"; b.textContent = label; b.title = title;
+          b.style.cssText = "width:auto;padding:0 8px;font-size:12px;line-height:26px;";
+          L.DomEvent.on(b, "click", (e) => { L.DomEvent.preventDefault(e); fn(); });
+        };
+        mk("US", "Zoom to the US", () => mapInstance.fitBounds(US_BOUNDS, { padding: [10, 10] }));
+        mk("All", "Show every airport", () => {
+          const bb = window.__allPinBounds;
+          if (bb && bb.length) mapInstance.fitBounds(bb, { padding: [28, 28], maxZoom: 5 });
+        });
+        L.DomEvent.disableClickPropagation(wrap);
+        return wrap;
+      },
+    });
+    window.__mapCtl = new Ctl().addTo(mapInstance);
   }
 }
 
