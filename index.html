@@ -676,7 +676,7 @@ a { color: var(--teal); }
     </div>
     <div class="stat">
       <span id="stat-flights" class="stat-num">–</span>
-      <span class="stat-label">flights logged</span>
+      <span class="stat-label">airport ratings</span>
     </div>
     <div class="stat">
       <span id="stat-updated" class="stat-num">–</span>
@@ -1606,18 +1606,21 @@ function renderBoard(airports, page) {
 
 function buildCoopEngagements(rows) {
   const list = [];
+  let order = 0;
   for (const row of rows) {
     const name = (row["Cooperative Name"] || "").trim();
     if (!name) continue;
     const date = parseTravelDate(row["Date Worked With"]);
     list.push({
+      order: order++,
       name,
       nature: (row["Nature of Work"] || "").trim(),
       date,
       year: date ? date.getFullYear() : null,
     });
   }
-  list.sort((a, b) => (b.date || 0) - (a.date || 0));
+  // Newest work first; ties (same date) fall back to sheet order, later rows = added more recently.
+  list.sort((a, b) => ((b.date ? b.date.getTime() : 0) - (a.date ? a.date.getTime() : 0)) || (b.order - a.order));
   return list;
 }
 
@@ -1675,7 +1678,7 @@ function renderMap(airports) {
   const bounds = [];
   pins.forEach(({ a, info }) => {
     const color = scoreColor(a.totalPct);
-    const radius = 6 + Math.min(a.visitCount, 8) * 1.6;
+    const radius = 6 + Math.min(Math.sqrt(a.visitCount) * 1.6, 5); // capped so home airports stay small
     const marker = L.circleMarker([info.lat, info.lon], {
       radius,
       fillColor: color,
