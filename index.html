@@ -317,6 +317,59 @@ a { color: var(--teal); }
 }
 .log-btn.ghost:hover { background: rgba(255,183,3,0.08); }
 
+
+button.log-btn { border: 0; cursor: pointer; font-family: inherit; }
+button.log-btn.ghost { border: 1px solid var(--amber-dim); }
+
+.log-modal[hidden] { display: none; }
+.log-modal {
+  position: fixed; inset: 0; z-index: 2000;
+  background: rgba(8,12,18,0.78);
+  display: flex; align-items: flex-start; justify-content: center;
+  padding: 24px 16px; overflow-y: auto;
+}
+.log-card {
+  background: var(--navy-900);
+  border: 1px solid var(--navy-600);
+  border-radius: 12px;
+  width: 100%; max-width: 520px;
+  padding: 22px 22px 20px;
+  margin: auto 0;
+  color: var(--cream);
+}
+.log-card h3 { margin: 0 0 14px; font-family: var(--font-display); font-size: 18px; color: var(--amber); }
+.log-field { margin-bottom: 14px; }
+.log-field > label, .log-field > .lf-label { display: block; font-size: 13px; font-weight: 600; color: var(--slate); margin-bottom: 6px; }
+.log-field input[type=text], .log-field input[type=date] {
+  width: 100%; box-sizing: border-box;
+  background: var(--navy-800); color: var(--cream);
+  border: 1px solid var(--navy-600); border-radius: 7px;
+  padding: 9px 10px; font: inherit; font-size: 15px;
+  color-scheme: dark;
+}
+.log-field input:focus { outline: 2px solid var(--amber); outline-offset: 1px; }
+.lf-hint { font-size: 12px; color: var(--slate-dim); margin: 5px 0 0; min-height: 16px; }
+.lf-hint.warn { color: var(--amber); }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.chips input { position: absolute; opacity: 0; pointer-events: none; }
+.chips label {
+  min-width: 34px; text-align: center; padding: 7px 10px;
+  background: var(--navy-800); border: 1px solid var(--navy-600);
+  border-radius: 7px; cursor: pointer; font-size: 14px; color: var(--cream);
+  user-select: none;
+}
+.chips input:checked + label { background: var(--amber); color: var(--navy-950); border-color: var(--amber); font-weight: 700; }
+.chips input:focus-visible + label { outline: 2px solid var(--teal); outline-offset: 1px; }
+.chips.wide label { padding: 8px 12px; }
+.log-row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.log-actions { display: flex; align-items: center; gap: 10px; margin-top: 18px; flex-wrap: wrap; }
+.log-actions .log-btn[disabled] { opacity: 0.6; cursor: default; transform: none; }
+.log-status { font-size: 13px; flex: 1; min-width: 120px; }
+.log-status.ok { color: var(--teal); }
+.log-status.err { color: var(--coral); }
+.log-alt { display: block; margin-top: 12px; font-size: 12px; color: var(--slate-dim); }
+.log-alt a { color: var(--slate); }
+
 .board-columns {
   display: grid;
   grid-template-columns: 44px 1fr 70px 76px;
@@ -687,7 +740,7 @@ a { color: var(--teal); }
   <section class="map-section">
     <div class="board-head">
       <h2>Where I've Been</h2>
-      <a class="log-btn" href="https://forms.gle/p8MTYvcDFLPehHbJA" target="_blank" rel="noopener">Log a flight ✈</a>
+      <button type="button" class="log-btn" data-log="flight">Log a flight ✈</button>
     </div>
     <div id="airport-map"></div>
     <p class="map-hint">Pin size and color scale with visit count and score. Tap a pin for details.</p>
@@ -696,7 +749,7 @@ a { color: var(--teal); }
   <section class="map-section">
     <div class="board-head">
       <h2>Co-ops I've Worked With</h2>
-      <a class="log-btn" href="https://docs.google.com/forms/d/e/1FAIpQLScj5H7yLJ4POVicC2i3jSHypygFDkxuHuh3JJ7X8booZmX4uA/viewform" target="_blank" rel="noopener">Log a co-op ⚡</a>
+      <button type="button" class="log-btn" data-log="coop">Log a co-op ⚡</button>
     </div>
     <div id="coop-map"></div>
     <div id="coop-legend" class="map-legend"></div>
@@ -747,10 +800,19 @@ a { color: var(--teal); }
 
 </main>
 
+
+<div id="log-modal" class="log-modal" hidden role="dialog" aria-modal="true" aria-labelledby="log-title">
+  <div class="log-card">
+    <h3 id="log-title"></h3>
+    <form id="log-form" novalidate></form>
+    <a id="log-alt" class="log-alt" target="_blank" rel="noopener">Prefer the Google Form? Open it instead.</a>
+  </div>
+</div>
+
 <footer class="site-footer">
   <div class="wrap">
     <p>Rated one boarding pass at a time by Levi. Data lives in a Google Sheet; this page just does the math.</p>
-    <a class="log-btn ghost" href="https://forms.gle/p8MTYvcDFLPehHbJA" target="_blank" rel="noopener">Log a flight ✈</a>
+    <button type="button" class="log-btn ghost" data-log="flight">Log a flight ✈</button>
   </div>
 </footer>
 
@@ -1186,6 +1248,12 @@ function renderCoopLegend(coops) {
     .join("");
 }
 
+let coopLayerGroup = null;
+function coopLayer() {
+  if (!coopLayerGroup) coopLayerGroup = L.layerGroup().addTo(coopMapInstance);
+  return coopLayerGroup;
+}
+
 function addCoopPin(c, coords) {
   const color = natureColor(c.primaryNature);
   const radius = 6 + Math.min(c.engagements.length, 6) * 1.6;
@@ -1195,7 +1263,7 @@ function addCoopPin(c, coords) {
     fillOpacity: 0.85,
     color: "#0e1620",
     weight: 2,
-  }).addTo(coopMapInstance);
+  }).addTo(coopLayer());
 
   const years = [...new Set(c.engagements.map((e) => e.year).filter(Boolean))].sort();
   const label = c.natures.join(", ") || "Unknown";
@@ -1222,6 +1290,8 @@ async function renderCoopMap(coops) {
       maxZoom: 19,
     }).addTo(coopMapInstance);
   }
+
+  coopLayer().clearLayers();
 
   // Split into pins we can place instantly (static table or a cached prior
   // lookup) versus ones that need a live geocode. Placing the fast ones
@@ -1657,6 +1727,8 @@ function renderCoopBoard(engagements, page) {
 }
 
 let mapInstance = null;
+let airportLayer = null;
+let airportFitted = false;
 
 function renderMap(airports) {
   const el = document.getElementById("airport-map");
@@ -1675,6 +1747,8 @@ function renderMap(airports) {
     }).addTo(mapInstance);
   }
 
+  if (!airportLayer) airportLayer = L.layerGroup().addTo(mapInstance);
+  airportLayer.clearLayers();
   const bounds = [];
   pins.forEach(({ a, info }) => {
     const color = scoreColor(a.totalPct);
@@ -1685,7 +1759,7 @@ function renderMap(airports) {
       fillOpacity: 0.85,
       color: "#0e1620",
       weight: 2,
-    }).addTo(mapInstance);
+    }).addTo(airportLayer);
     marker.bindPopup(
       `<strong>${a.code}</strong> — ${info.name}<br>` +
       `${Math.round(a.totalPct)}% · ${a.visitCount} visit${a.visitCount === 1 ? "" : "s"}`
@@ -1695,7 +1769,7 @@ function renderMap(airports) {
 
   // Default extent stays on the continental US; international pins are a pan/zoom (or "All") away.
   const US_BOUNDS = [[24.5, -125], [49.5, -66.5]];
-  mapInstance.fitBounds(US_BOUNDS, { padding: [10, 10] });
+  if (!airportFitted) { mapInstance.fitBounds(US_BOUNDS, { padding: [10, 10] }); airportFitted = true; }
   window.__allPinBounds = bounds;
   if (!window.__mapCtl) {
     const Ctl = L.Control.extend({
@@ -1727,6 +1801,16 @@ async function fetchCSV(url) {
   return res.text();
 }
 
+const STATE = { responses: [], ratingMap: {}, weightMap: {}, flightsLoaded: false, coopRows: [], coopsLoaded: false };
+
+function renderFlights() {
+  const airports = buildAirportStats(STATE.responses, STATE.ratingMap, STATE.weightMap);
+  renderHero(airports[0]);
+  renderStats(airports, STATE.responses);
+  renderBoard(airports);
+  renderMap(airports);
+}
+
 async function boot() {
   try {
     const [responsesText, miscText] = await Promise.all([
@@ -1736,14 +1820,13 @@ async function boot() {
 
     const responses = rowsToObjects(parseCSV(responsesText));
     const { ratingMap, weightMap } = parseMisc(parseCSV(miscText));
+    STATE.responses = responses;
+    STATE.ratingMap = ratingMap;
+    STATE.weightMap = weightMap;
+    STATE.flightsLoaded = true;
 
-    const airports = buildAirportStats(responses, ratingMap, weightMap);
-
-    renderHero(airports[0]);
-    renderStats(airports, responses);
     renderMethodology(weightMap);
-    renderBoard(airports);
-    renderMap(airports);
+    renderFlights();
   } catch (err) {
     console.error(err);
     document.getElementById("board-body").innerHTML =
@@ -1756,6 +1839,8 @@ async function bootCoops() {
   try {
     const coopsText = await fetchCSV(COOPS_CSV_URL);
     const coopRows = rowsToObjects(parseCSV(coopsText));
+    STATE.coopRows = coopRows;
+    STATE.coopsLoaded = true;
     const coops = buildCoopStats(coopRows);
     renderCoopBoard(buildCoopEngagements(coopRows));
     await renderCoopMap(coops);
@@ -1767,6 +1852,195 @@ async function bootCoops() {
     if (boardBody) boardBody.innerHTML = '<p class="loading-msg">Couldn\'t load the co-op log right now. Check back in a bit.</p>';
   }
 }
+
+/* ---------- In-app logging (posts straight to the Google Forms) ---------- */
+const FLIGHT_FORM = {
+  action: "https://docs.google.com/forms/d/e/1FAIpQLSdV8IZJ2KNuyJ8sDghr4izR_tORXVHwjDYeJrALB8TaFnwcGw/formResponse",
+  open: "https://forms.gle/p8MTYvcDFLPehHbJA",
+  date: "entry.996230319", code: "entry.83493482",
+  ratings: { Cleanliness: "entry.550820666", Space: "entry.140661547", Workability: "entry.432355201", "Food Options": "entry.1810164662", "Taxi Time": "entry.483845785" },
+  delay: "entry.170695417", rental: "entry.243580272",
+};
+const COOP_FORM = {
+  action: "https://docs.google.com/forms/d/e/1FAIpQLScj5H7yLJ4POVicC2i3jSHypygFDkxuHuh3JJ7X8booZmX4uA/formResponse",
+  open: "https://docs.google.com/forms/d/e/1FAIpQLScj5H7yLJ4POVicC2i3jSHypygFDkxuHuh3JJ7X8booZmX4uA/viewform",
+  name: "entry.1795642238", town: "entry.1306596732", state: "entry.163610989", nature: "entry.45588294", date: "entry.2006123341",
+};
+const DELAY_OPTIONS = ["No Delay", "Slight Delay (<30 minutes)", "Moderate Delay (>30 mins, <2 hours)", "Significant Delay"];
+const RENTAL_OPTIONS = ["N/A", "Quick Walk", "Tram", "Shuttle Bus"];
+const NATURE_OPTIONS = ["Employed", "Visited", "Consulted", "Other"];
+
+function todayISO() {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+function isoToMDY(iso) {
+  const [y, m, d] = iso.split("-").map(Number);
+  return `${m}/${d}/${y}`;
+}
+function chipGroup(name, options, wide) {
+  return `<div class="chips${wide ? " wide" : ""}">` + options.map((o, i) => {
+    const id = `${name}-${i}`;
+    return `<input type="radio" name="${name}" id="${id}" value="${escapeHtml(String(o))}"><label for="${id}">${escapeHtml(String(o))}</label>`;
+  }).join("") + `</div>`;
+}
+
+function flightFormHTML() {
+  const rated = CATEGORY_DEFS.filter((d) => d.source === "direct").map((d) =>
+    `<div class="log-field"><span class="lf-label">${d.key}</span>${chipGroup("r-" + d.key.replace(/\s/g, ""), [1,2,3,4,5,6,7,8,9,10])}</div>`
+  ).join("");
+  const dl = Object.keys(AIRPORTS).sort().map((c) => `<option value="${c}">${escapeHtml(AIRPORTS[c].name)}</option>`).join("");
+  return `
+    <div class="log-row2">
+      <div class="log-field"><label for="f-date">Travel date</label><input type="date" id="f-date" value="${todayISO()}"></div>
+      <div class="log-field"><label for="f-code">Airport code</label><input type="text" id="f-code" list="f-codes" maxlength="3" autocomplete="off" autocapitalize="characters" placeholder="IND"></div>
+    </div>
+    <datalist id="f-codes">${dl}</datalist>
+    <p class="lf-hint" id="f-hint"></p>
+    ${rated}
+    <div class="log-field"><span class="lf-label">Delay?</span>${chipGroup("f-delay", DELAY_OPTIONS, true)}</div>
+    <div class="log-field"><span class="lf-label">Rental car situation</span>${chipGroup("f-rental", RENTAL_OPTIONS, true)}</div>
+    <div class="log-actions"><button type="submit" class="log-btn">Log flight</button><button type="button" class="log-btn ghost" data-close>Cancel</button><span class="log-status" id="log-status" role="status"></span></div>`;
+}
+function coopFormHTML() {
+  return `
+    <div class="log-field"><label for="c-name">Cooperative name</label><input type="text" id="c-name" autocomplete="off"></div>
+    <div class="log-row2">
+      <div class="log-field"><label for="c-town">HQ town</label><input type="text" id="c-town" autocomplete="off"></div>
+      <div class="log-field"><label for="c-state">HQ state</label><input type="text" id="c-state" maxlength="2" autocapitalize="characters" placeholder="IN"></div>
+    </div>
+    <div class="log-field"><span class="lf-label">Nature of work</span>${chipGroup("c-nature", NATURE_OPTIONS, true)}</div>
+    <div class="log-field"><label for="c-date">Date worked with</label><input type="date" id="c-date" value="${todayISO()}"></div>
+    <div class="log-actions"><button type="submit" class="log-btn">Log co-op</button><button type="button" class="log-btn ghost" data-close>Cancel</button><span class="log-status" id="log-status" role="status"></span></div>`;
+}
+
+let logKind = null;
+let lastFocus = null;
+
+function openLog(kind) {
+  logKind = kind;
+  lastFocus = document.activeElement;
+  const modal = document.getElementById("log-modal");
+  const form = document.getElementById("log-form");
+  document.getElementById("log-title").textContent = kind === "flight" ? "Log a flight ✈" : "Log a co-op ⚡";
+  form.innerHTML = kind === "flight" ? flightFormHTML() : coopFormHTML();
+  document.getElementById("log-alt").href = (kind === "flight" ? FLIGHT_FORM : COOP_FORM).open;
+  modal.hidden = false;
+  document.body.style.overflow = "hidden";
+  const first = form.querySelector("input[type=date], input[type=text]");
+  if (kind === "flight") document.getElementById("f-code").focus(); else document.getElementById("c-name").focus();
+  if (kind === "flight") {
+    const code = document.getElementById("f-code");
+    const hint = document.getElementById("f-hint");
+    code.addEventListener("input", () => {
+      code.value = code.value.toUpperCase().replace(/[^A-Z]/g, "");
+      const c = code.value;
+      if (c.length < 3) { hint.textContent = ""; hint.className = "lf-hint"; return; }
+      if (AIRPORTS[c]) { hint.textContent = `${AIRPORTS[c].name}, ${AIRPORTS[c].city}`; hint.className = "lf-hint"; }
+      else { hint.textContent = "Not in my airport list yet. It will still be logged, but won't get a map pin until it's added."; hint.className = "lf-hint warn"; }
+    });
+  }
+}
+function closeLog() {
+  document.getElementById("log-modal").hidden = true;
+  document.body.style.overflow = "";
+  logKind = null;
+  if (lastFocus && lastFocus.focus) lastFocus.focus();
+}
+function setStatus(msg, cls) {
+  const el = document.getElementById("log-status");
+  if (el) { el.textContent = msg; el.className = "log-status " + (cls || ""); }
+}
+function radioVal(form, name) {
+  const el = form.querySelector(`input[name="${name}"]:checked`);
+  return el ? el.value : "";
+}
+function dateParts(prefix, iso) {
+  const [y, m, d] = iso.split("-").map(Number);
+  return { [prefix]: iso, [prefix + "_year"]: String(y), [prefix + "_month"]: String(m), [prefix + "_day"]: String(d) };
+}
+async function postForm(action, fields) {
+  const body = new URLSearchParams();
+  Object.entries(fields).forEach(([k, v]) => body.append(k, v));
+  body.append("fvv", "1");
+  body.append("pageHistory", "0");
+  // no-cors: Google doesn't send CORS headers, so the reply is opaque. A resolved
+  // fetch means the request went out; a rejected one means the network failed.
+  await fetch(action, { method: "POST", mode: "no-cors", body });
+}
+
+async function submitLog(e) {
+  e.preventDefault();
+  const form = e.target;
+  const btn = form.querySelector("button[type=submit]");
+  let fields, optimistic;
+
+  if (logKind === "flight") {
+    const date = form.querySelector("#f-date").value;
+    const code = form.querySelector("#f-code").value.trim().toUpperCase();
+    const delay = radioVal(form, "f-delay");
+    const rental = radioVal(form, "f-rental");
+    const ratings = {};
+    for (const d of CATEGORY_DEFS.filter((x) => x.source === "direct")) {
+      ratings[d.key] = radioVal(form, "r-" + d.key.replace(/\s/g, ""));
+    }
+    if (!date) return setStatus("Pick a travel date.", "err");
+    if (code.length !== 3) return setStatus("Enter a 3-letter airport code.", "err");
+    const missing = Object.keys(ratings).find((k) => !ratings[k]);
+    if (missing) return setStatus(`Rate ${missing}.`, "err");
+    if (!delay) return setStatus("Choose a delay option.", "err");
+    if (!rental) return setStatus("Choose a rental car option.", "err");
+
+    fields = { ...dateParts(FLIGHT_FORM.date, date), [FLIGHT_FORM.code]: code, [FLIGHT_FORM.delay]: delay, [FLIGHT_FORM.rental]: rental };
+    for (const k of Object.keys(ratings)) fields[FLIGHT_FORM.ratings[k]] = ratings[k];
+    optimistic = { "Travel Date": isoToMDY(date), "Airport Code": code, ...ratings, "Delay?": delay, "Rental Car Situation": rental };
+  } else {
+    const name = form.querySelector("#c-name").value.trim();
+    const town = form.querySelector("#c-town").value.trim();
+    const state = form.querySelector("#c-state").value.trim().toUpperCase();
+    const nature = radioVal(form, "c-nature");
+    const date = form.querySelector("#c-date").value;
+    if (!name) return setStatus("Enter the cooperative name.", "err");
+    if (!town) return setStatus("Enter the HQ town.", "err");
+    if (state.length !== 2) return setStatus("Enter the 2-letter state.", "err");
+    if (!nature) return setStatus("Choose the nature of work.", "err");
+    if (!date) return setStatus("Pick a date.", "err");
+
+    fields = { ...dateParts(COOP_FORM.date, date), [COOP_FORM.name]: name, [COOP_FORM.town]: town, [COOP_FORM.state]: state, [COOP_FORM.nature]: nature };
+    optimistic = { "Cooperative Name": name, "Cooperative HQ Town": town, "Cooperative HQ State": state, "Nature of Work": nature, "Date Worked With": isoToMDY(date) };
+  }
+
+  btn.disabled = true;
+  setStatus("Sending…", "");
+  try {
+    await postForm((logKind === "flight" ? FLIGHT_FORM : COOP_FORM).action, fields);
+  } catch (err) {
+    console.error(err);
+    btn.disabled = false;
+    return setStatus("Couldn't reach Google. Check your connection and try again.", "err");
+  }
+
+  // The published CSV lags the sheet by a few minutes, so show the new entry now.
+  // It isn't stored locally; a refresh pulls the real row once Google publishes it.
+  if (logKind === "flight" && STATE.flightsLoaded) { STATE.responses.push(optimistic); renderFlights(); }
+  if (logKind === "coop" && STATE.coopsLoaded) {
+    STATE.coopRows.push(optimistic);
+    renderCoopBoard(buildCoopEngagements(STATE.coopRows));
+    renderCoopMap(buildCoopStats(STATE.coopRows));
+  }
+  setStatus("Logged ✓", "ok");
+  setTimeout(closeLog, 900);
+}
+
+document.addEventListener("click", (e) => {
+  const b = e.target.closest("[data-log]");
+  if (b) { openLog(b.dataset.log); return; }
+  if (e.target.closest("[data-close]") || e.target.id === "log-modal") closeLog();
+});
+document.addEventListener("keydown", (e) => {
+  if (e.key === "Escape" && logKind) closeLog();
+});
+document.getElementById("log-form").addEventListener("submit", submitLog);
 
 boot();
 bootCoops();
