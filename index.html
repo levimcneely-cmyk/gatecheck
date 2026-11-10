@@ -94,8 +94,54 @@ a { color: var(--teal); }
 
 .hero {
   padding: 56px 0 40px;
-  text-align: center;
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  gap: 40px;
   border-bottom: 1px solid var(--navy-700);
+}
+
+.hero-main { text-align: center; min-width: 0; }
+
+.hero-count {
+  margin: 10px 0 0;
+  color: var(--slate-dim);
+  font-size: 14px;
+}
+
+.hero-num {
+  font-family: var(--font-display);
+  font-weight: 700;
+  color: var(--teal);
+  font-size: 18px;
+}
+
+.hero-side {
+  align-self: stretch;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  text-align: center;
+  padding: 0 36px 0 40px;
+  border-left: 1px solid var(--navy-700);
+}
+
+.hero-num-big { font-size: clamp(44px, 7vw, 64px); line-height: 1; }
+
+.hero-side-label {
+  margin-top: 8px;
+  font-size: 14px;
+  color: var(--slate);
+}
+
+@media (max-width: 640px) {
+  .hero { grid-template-columns: 1fr; gap: 28px; }
+  .hero-side {
+    border-left: 0;
+    border-top: 1px solid var(--navy-700);
+    padding: 24px 0 0;
+  }
 }
 
 .hero-label {
@@ -150,35 +196,6 @@ a { color: var(--teal); }
   margin: 22px 0 0;
   color: var(--slate);
   font-size: 16px;
-}
-
-.stats-strip {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 1px;
-  background: var(--navy-700);
-  border-bottom: 1px solid var(--navy-700);
-}
-
-.stat {
-  background: var(--navy-950);
-  padding: 22px 10px;
-  text-align: center;
-}
-
-.stat-num {
-  display: block;
-  font-family: var(--font-display);
-  font-size: 26px;
-  font-weight: 700;
-  color: var(--teal);
-}
-
-.stat-label {
-  display: block;
-  margin-top: 4px;
-  font-size: 12.5px;
-  color: var(--slate-dim);
 }
 
 .board-section {
@@ -715,25 +732,17 @@ button.log-btn.ghost { border: 1px solid var(--amber-dim); }
 <main class="wrap">
 
   <section id="hero" class="hero" aria-live="polite">
-    <p class="hero-label">Currently ranked #1</p>
-    <div id="hero-flap" class="flap-display">
-      <span class="flap-loading">LOADING&hellip;</span>
+    <div class="hero-main">
+      <p class="hero-label">Currently ranked #1</p>
+      <div id="hero-flap" class="flap-display">
+        <span class="flap-loading">LOADING&hellip;</span>
+      </div>
+      <p id="hero-name" class="hero-name">&nbsp;</p>
+      <p class="hero-count"><span id="stat-airports" class="hero-num">–</span> airports rated</p>
     </div>
-    <p id="hero-name" class="hero-name">&nbsp;</p>
-  </section>
-
-  <section id="stats" class="stats-strip">
-    <div class="stat">
-      <span id="stat-airports" class="stat-num">–</span>
-      <span class="stat-label">airports rated</span>
-    </div>
-    <div class="stat">
-      <span id="stat-flights" class="stat-num">–</span>
-      <span class="stat-label">airport ratings</span>
-    </div>
-    <div class="stat">
-      <span id="stat-updated" class="stat-num">–</span>
-      <span class="stat-label">last logged</span>
+    <div class="hero-side">
+      <span id="stat-coops" class="hero-num hero-num-big">–</span>
+      <span class="hero-side-label">co-ops tracked</span>
     </div>
   </section>
 
@@ -1540,16 +1549,13 @@ function renderHero(top) {
   nameEl.textContent = `${info.name} · ${Math.round(top.totalPct)}%`;
 }
 
-function renderStats(airports, responses) {
+function renderStats(airports) {
   document.getElementById("stat-airports").textContent = airports.length;
-  // Count only rows that produced a real, complete visit (matches the rows
-  // actually used in the scoring math) rather than every raw CSV row —
-  // the sheet can have blank/partial rows the form leaves behind.
-  const flightCount = airports.reduce((sum, a) => sum + a.visitCount, 0);
-  document.getElementById("stat-flights").textContent = flightCount;
-  const dates = responses.map((r) => parseTravelDate(r["Travel Date"])).filter(Boolean);
-  const last = dates.length ? new Date(Math.max(...dates)) : null;
-  document.getElementById("stat-updated").textContent = last ? fmtDate(last) : "–";
+}
+
+function renderCoopCount(rows) {
+  const names = new Set(rows.map((r) => (r["Cooperative Name"] || "").trim().toLowerCase()).filter(Boolean));
+  document.getElementById("stat-coops").textContent = names.size;
 }
 
 function categoryDisplayName(key) {
@@ -1806,7 +1812,7 @@ const STATE = { responses: [], ratingMap: {}, weightMap: {}, flightsLoaded: fals
 function renderFlights() {
   const airports = buildAirportStats(STATE.responses, STATE.ratingMap, STATE.weightMap);
   renderHero(airports[0]);
-  renderStats(airports, STATE.responses);
+  renderStats(airports);
   renderBoard(airports);
   renderMap(airports);
 }
@@ -1841,6 +1847,7 @@ async function bootCoops() {
     const coopRows = rowsToObjects(parseCSV(coopsText));
     STATE.coopRows = coopRows;
     STATE.coopsLoaded = true;
+    renderCoopCount(coopRows);
     const coops = buildCoopStats(coopRows);
     renderCoopBoard(buildCoopEngagements(coopRows));
     await renderCoopMap(coops);
@@ -2025,6 +2032,7 @@ async function submitLog(e) {
   if (logKind === "flight" && STATE.flightsLoaded) { STATE.responses.push(optimistic); renderFlights(); }
   if (logKind === "coop" && STATE.coopsLoaded) {
     STATE.coopRows.push(optimistic);
+    renderCoopCount(STATE.coopRows);
     renderCoopBoard(buildCoopEngagements(STATE.coopRows));
     renderCoopMap(buildCoopStats(STATE.coopRows));
   }
