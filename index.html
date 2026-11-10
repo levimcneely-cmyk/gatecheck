@@ -2133,7 +2133,7 @@ async function confirmEntry(spec) {
         return;
       }
     } catch (err) { console.warn("confirm poll failed", err); }
-    showToast(`${label} sent. Still waiting for Google to confirm… ${fallback} if it doesn't appear.`, "warn");
+    showToast(`${label} sent. Google usually takes a few minutes to publish new rows, so this can take a bit. If it hasn't appeared in about 6 minutes, ${fallback}.`, "warn");
   }
   showToast(`${label} didn't show up in the sheet, so Google likely rejected it. ${fallback} to log it.`, "warn");
 }
