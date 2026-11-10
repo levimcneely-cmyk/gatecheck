@@ -384,6 +384,17 @@ button.log-btn.ghost { border: 1px solid var(--amber-dim); }
 .log-status { font-size: 13px; flex: 1; min-width: 120px; }
 .log-status.ok { color: var(--teal); }
 .log-status.err { color: var(--coral); }
+.log-toast {
+  position: fixed; left: 50%; bottom: 20px; transform: translateX(-50%);
+  z-index: 2100; width: calc(100% - 32px); max-width: 480px;
+  background: var(--navy-800); border: 1px solid var(--navy-600);
+  border-radius: 10px; padding: 12px 14px; font-size: 14px;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+}
+.log-toast[hidden] { display: none; }
+.log-toast.ok { border-color: var(--teal); }
+.log-toast.warn { border-color: var(--amber); }
+.log-toast a { color: var(--amber); font-weight: 700; }
 .log-alt { display: block; margin-top: 12px; font-size: 12px; color: var(--slate-dim); }
 .log-alt a { color: var(--slate); }
 
@@ -817,6 +828,8 @@ button.log-btn.ghost { border: 1px solid var(--amber-dim); }
     <a id="log-alt" class="log-alt" target="_blank" rel="noopener">Prefer the Google Form? Open it instead.</a>
   </div>
 </div>
+
+<div id="log-toast" class="log-toast" hidden role="status" aria-live="polite"></div>
 
 <footer class="site-footer">
   <div class="wrap">
@@ -1978,7 +1991,7 @@ async function postForm(action, fields) {
   body.append("pageHistory", "0");
   // no-cors: Google doesn't send CORS headers, so the reply is opaque. A resolved
   // fetch means the request went out; a rejected one means the network failed.
-  await fetch(action, { method: "POST", mode: "no-cors", body });
+  await fetch(action, { method: "POST", mode: "no-cors", credentials: "include", body });
 }
 
 async function submitLog(e) {
@@ -2032,8 +2045,11 @@ async function submitLog(e) {
     return setStatus("Couldn't reach Google. Check your connection and try again.", "err");
   }
 
-  // The published CSV lags the sheet by a few minutes, so show the new entry now.
-  // It isn't stored locally; a refresh pulls the real row once Google publishes it.
+  // Show the entry right away, then confirm it actually reached the sheet.
+  const spec = logKind === "flight"
+    ? { kind: "flight", label: fields[FLIGHT_FORM.code], match: { code: fields[FLIGHT_FORM.code], date: optimistic["Travel Date"] }, prefill: buildPrefill(FLIGHT_FORM.open, fields) }
+    : { kind: "coop", label: optimistic["Cooperative Name"], match: { name: optimistic["Cooperative Name"].toLowerCase(), date: optimistic["Date Worked With"] }, prefill: buildPrefill(COOP_FORM.open, fields) };
+  spec.before = countMatches(spec.kind, spec.kind === "flight" ? STATE.responses : STATE.coopRows, spec.match);
   if (logKind === "flight" && STATE.flightsLoaded) { STATE.responses.push(optimistic); renderFlights(); }
   if (logKind === "coop" && STATE.coopsLoaded) {
     STATE.coopRows.push(optimistic);
@@ -2041,8 +2057,67 @@ async function submitLog(e) {
     renderCoopBoard(buildCoopEngagements(STATE.coopRows));
     renderCoopMap(buildCoopStats(STATE.coopRows));
   }
-  setStatus("Logged ✓", "ok");
-  setTimeout(closeLog, 900);
+  setStatus("Sent ✓", "ok");
+  setTimeout(closeLog, 600);
+  confirmEntry(spec);
+}
+
+function buildPrefill(base, fields) {
+  const q = new URLSearchParams({ usp: "pp_url" });
+  for (const [k, v] of Object.entries(fields)) {
+    if (/_(year|month|day)$/.test(k)) continue; // pre-fill uses the single YYYY-MM-DD value
+    q.append(k, v);
+  }
+  return `${base}?${q.toString()}`;
+}
+
+function normDate(s) {
+  const d = parseTravelDate(s);
+  return d ? `${d.getMonth() + 1}/${d.getDate()}/${d.getFullYear()}` : (s || "").trim();
+}
+function countMatches(kind, rows, m) {
+  return rows.filter((r) => kind === "flight"
+    ? (r["Airport Code"] || "").trim().toUpperCase() === m.code && normDate(r["Travel Date"]) === normDate(m.date)
+    : (r["Cooperative Name"] || "").trim().toLowerCase() === m.name && normDate(r["Date Worked With"]) === normDate(m.date)
+  ).length;
+}
+
+function showToast(html, cls) {
+  const t = document.getElementById("log-toast");
+  t.innerHTML = html;
+  t.className = "log-toast " + (cls || "");
+  t.hidden = false;
+}
+
+// Google's reply to the form post is opaque, so the only way to know it worked is to
+// watch the published sheet. That copy lags by a few minutes, so poll for a while and,
+// if the row never appears, hand over a pre-filled Google Form to finish in one tap.
+async function confirmEntry(spec) {
+  const url = spec.kind === "flight" ? RESPONSES_CSV_URL : COOPS_CSV_URL;
+  const label = escapeHtml(spec.label);
+  const fallback = `<a href="${escapeHtml(spec.prefill)}" target="_blank" rel="noopener">Open it pre-filled in Google Forms</a>`;
+  showToast(`${label} sent. Confirming it reached the sheet…`, "");
+  const started = Date.now();
+  const MAX_MS = 6 * 60 * 1000;
+  while (Date.now() - started < MAX_MS) {
+    await new Promise((r) => setTimeout(r, 15000));
+    try {
+      const text = await fetchCSV(url + "&_=" + Date.now());
+      const rows = rowsToObjects(parseCSV(text));
+      if (countMatches(spec.kind, rows, spec.match) > spec.before) {
+        if (spec.kind === "flight") { STATE.responses = rows; renderFlights(); }
+        else {
+          STATE.coopRows = rows; renderCoopCount(rows);
+          renderCoopBoard(buildCoopEngagements(rows)); renderCoopMap(buildCoopStats(rows));
+        }
+        showToast(`${label} is saved in your sheet ✓`, "ok");
+        setTimeout(() => { document.getElementById("log-toast").hidden = true; }, 5000);
+        return;
+      }
+    } catch (err) { console.warn("confirm poll failed", err); }
+    showToast(`${label} sent. Still waiting for Google to confirm… ${fallback} if it doesn't appear.`, "warn");
+  }
+  showToast(`${label} didn't show up in the sheet, so Google likely rejected it. ${fallback} to log it.`, "warn");
 }
 
 document.addEventListener("click", (e) => {
