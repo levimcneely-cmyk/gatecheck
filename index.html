@@ -1281,9 +1281,25 @@ function coopLayer() {
   return coopLayerGroup;
 }
 
-function addCoopPin(c, coords) {
-  const color = natureColor(c.primaryNature);
-  const radius = 6 + Math.min(c.engagements.length, 6) * 1.6;
+// One pin per place. Two co-ops headquartered in the same town (e.g. Owensboro, KY)
+// would otherwise sit exactly on top of each other with one hidden underneath.
+function groupCoopSites(coops) {
+  const sites = new Map();
+  for (const c of coops) {
+    const key = coopCoordKey(c.town, c.state);
+    if (!sites.has(key)) sites.set(key, { town: c.town, state: c.state, coops: [] });
+    sites.get(key).coops.push(c);
+  }
+  return [...sites.values()];
+}
+
+function addCoopPin(site, coords) {
+  const all = site.coops;
+  const natures = [...new Set(all.flatMap((c) => c.natures))];
+  const primary = NATURE_COLOR_ORDER.find((n) => natures.includes(n)) || natures[0] || "";
+  const color = natureColor(primary);
+  const total = all.reduce((sum, c) => sum + c.engagements.length, 0);
+  const radius = 6 + Math.min(total, 6) * 1.6;
   const marker = L.circleMarker([coords.lat, coords.lon], {
     radius,
     fillColor: color,
@@ -1292,12 +1308,14 @@ function addCoopPin(c, coords) {
     weight: 2,
   }).addTo(coopLayer());
 
-  const years = [...new Set(c.engagements.map((e) => e.year).filter(Boolean))].sort();
-  const label = c.natures.join(", ") || "Unknown";
+  const blocks = all.map((c) => {
+    const years = [...new Set(c.engagements.map((e) => e.year).filter(Boolean))].sort();
+    const label = c.natures.join(", ") || "Unknown";
+    return `<strong>${escapeHtml(c.name)}</strong><br>` +
+      `${escapeHtml(label)}${years.length ? " · " + years.join(", ") : ""}`;
+  });
   marker.bindPopup(
-    `<strong>${escapeHtml(c.name)}</strong><br>` +
-    `${escapeHtml(c.town)}, ${escapeHtml(c.state)}<br>` +
-    `${escapeHtml(label)}${years.length ? " · " + years.join(", ") : ""}`
+    `${escapeHtml(site.town)}, ${escapeHtml(site.state)}<br>` + blocks.join("<hr style=\"border:0;border-top:1px solid #33465f;margin:6px 0\">")
   );
   return [coords.lat, coords.lon];
 }
@@ -1326,7 +1344,7 @@ async function renderCoopMap(coops) {
   // one unfamiliar town before showing anything at all.
   const bounds = [];
   const pending = [];
-  for (const c of coops) {
+  for (const c of groupCoopSites(coops)) {
     const coords = getKnownCoords(c.town, c.state);
     if (coords) bounds.push(addCoopPin(c, coords));
     else pending.push(c);
@@ -1359,8 +1377,8 @@ async function renderCoopMap(coops) {
     const states = new Set(coops.map((c) => c.state).filter(Boolean));
     let text = `${coops.length} cooperative${coops.length === 1 ? "" : "s"} across ${states.size} state${states.size === 1 ? "" : "s"}. Tap a pin for details.`;
     if (failed.length) {
-      const names = failed.map((c) => `${c.name} (${c.town}, ${c.state})`).join("; ");
-      text += ` Couldn't place ${failed.length}: ${names}.`;
+      const names = failed.flatMap((site) => site.coops.map((c) => `${c.name} (${c.town}, ${c.state})`)).join("; ");
+      text += ` Couldn't place ${failed.reduce((n, site) => n + site.coops.length, 0)}: ${names}.`;
       console.warn("Co-op geocoding failed for:", names);
     }
     hint.textContent = text;
