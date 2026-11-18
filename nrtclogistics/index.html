@@ -167,13 +167,23 @@ html.locked #gate { display: flex; min-height: 100vh; align-items: center; justi
 .gate-card h1 { font-size: 20px; margin: 12px 0 4px; }
 .gate-card p { color: var(--muted); font-size: 13.5px; margin: 0 0 16px; }
 .gate-card input { text-align: center; letter-spacing: .15em; font-size: 16px; }
+.sync-status { font-size: 12.5px; color: var(--muted); white-space: nowrap; }
+.sync-status.ok::before { content: "● "; color: var(--aqua); }
+.sync-status.busy::before { content: "● "; color: #d9a400; }
+.sync-status.off::before { content: "● "; color: var(--strawberry); }
 .gate-card .gate-err { color: var(--strawberry); font-size: 13px; min-height: 18px; margin: 8px 0 0; }
 </style>
 <script>
   // Hide everything until the passcode check runs (no flash of the itinerary)
+  // Shared backend: the Google Apps Script web-app URL. Empty = trips stay in this browser only.
+  window.SYNC_URL = "";
   (function () {
     var PASS_HASH = "e3bafff2e5fea0daa2706b58b5cb99386d422f056255529a74514244a1675171";
-    try { if (localStorage.getItem("nrtclog:unlock") === PASS_HASH) return; } catch (e) {}
+    try {
+      var unlocked = localStorage.getItem("nrtclog:unlock") === PASS_HASH;
+      var ready = !window.SYNC_URL || (localStorage.getItem("nrtclog:pass") && localStorage.getItem("nrtclog:me"));
+      if (unlocked && ready) return;
+    } catch (e) {}
     document.documentElement.classList.add("locked");
   })();
 </script>
@@ -185,6 +195,7 @@ html.locked #gate { display: flex; min-height: 100vh; align-items: center; justi
     <h1>Logistics Hub</h1>
     <p>Enter the team passcode.</p>
     <input class="f-input" id="gatePass" type="password" autocomplete="current-password" aria-label="Passcode" autofocus>
+    <select class="f-input" id="gateMe" aria-label="Who are you?" style="margin-top:8px;display:none;text-align:center"></select>
     <button class="btn primary" style="width:100%;justify-content:center;margin-top:10px">Unlock</button>
     <p class="gate-err" id="gateErr"></p>
   </form>
@@ -202,6 +213,7 @@ html.locked #gate { display: flex; min-height: 100vh; align-items: center; justi
     <button class="btn" id="dupTrip" title="Copy this trip as a starting point">Duplicate</button>
     <button class="btn" id="teamBtn">Team</button>
     <button class="btn" id="moreBtn">Backup ▾</button>
+    <span id="syncStatus" class="sync-status" hidden></span>
     <button class="btn ghost" id="lockBtn" title="Lock this page on this device">🔒</button>
   </div>
 </header>
@@ -406,7 +418,7 @@ function apInfo(code) { const a = window.AP && AP[(code || "").toUpperCase()]; r
 let DB = load();
 let TEAM = loadTeam();
 let TERR = (() => { try { const t = JSON.parse(localStorage.getItem(TERR_KEY)); if (t && typeof t === "object") return t; } catch (e) {} return { ...DEFAULT_TERR }; })();
-function saveTerr() { localStorage.setItem(TERR_KEY, JSON.stringify(TERR)); }
+function saveTerr() { localStorage.setItem(TERR_KEY, JSON.stringify(TERR)); if (window.syncSoon) syncSoon(); }
 function rbmForState(st) { st = (st || "").trim().toUpperCase(); if (!st) return ""; return Object.keys(TERR).find((n) => (TERR[n] || "").toUpperCase().split(/[\s,]+/).includes(st)) || ""; }
 function coopRBM(c) { return c.rbmManual ? (c.rbm || "") : rbmForState(c.state); }
 const rbmNames = () => [...new Set([...TEAM.filter((p) => p.group === "RBMS").map((p) => p.name), ...Object.keys(TERR)])];
@@ -414,9 +426,9 @@ function load() {
   try { const d = JSON.parse(localStorage.getItem(STORE_KEY)); if (d && d.trips) return d; } catch (e) {}
   const t = sampleTrip(); return { trips: [t], current: t.id, opts: { conf: true, addr: true, miles: false } };
 }
-function save() { try { localStorage.setItem(STORE_KEY, JSON.stringify(DB)); } catch (e) { toast("Couldn't save in this browser"); } }
+function save() { try { localStorage.setItem(STORE_KEY, JSON.stringify(DB)); } catch (e) { toast("Couldn't save in this browser"); } if (window.syncSoon) syncSoon(); }
 function loadTeam() { try { const t = JSON.parse(localStorage.getItem(TEAM_KEY)); if (Array.isArray(t) && t.length) return t; } catch (e) {} return clone(DEFAULT_TEAM); }
-function saveTeam() { localStorage.setItem(TEAM_KEY, JSON.stringify(TEAM)); }
+function saveTeam() { localStorage.setItem(TEAM_KEY, JSON.stringify(TEAM)); if (window.syncSoon) syncSoon(); }
 const trip = () => DB.trips.find((t) => t.id === DB.current) || DB.trips[0];
 function homeOf(name) { const p = TEAM.find((x) => x.name === name); return (p && p.home || "").toUpperCase(); }
 
@@ -425,7 +437,7 @@ function newTrip() { return { id: uid(), title: "", coops: [], travelers: [], no
 function sampleTrip() {
   // Rebuilt from the Aug 31 – Sep 2, 2026 Western Co-op trip email, so there's something to look at.
   return {
-    id: uid(), title: "WCE Executive Readout (example)", notes: "",
+    id: uid(), sample: true, title: "WCE Executive Readout (example)", notes: "",
     coops: [{ name: "Western Cooperative Electric", town: "WaKeeney", state: "KS", address: "", lat: 39.0245, lon: -99.882 }],
     travelers: ["Levi McNeely", "Thomas McCollum"],
     items: [
@@ -848,7 +860,7 @@ function render() {
   $("#tripSelect").innerHTML = DB.trips.map((x) => `<option value="${x.id}" ${x.id === t.id ? "selected" : ""}>${esc(x.title || "Untitled trip")}${tripRange(x) ? ` · ${esc(tripRange(x))}` : ""}</option>`).join("");
   if (document.activeElement !== $("#tripTitle")) $("#tripTitle").value = t.title;
   if (document.activeElement !== $("#tripNotes")) $("#tripNotes").value = t.notes || "";
-  $("#tripDates").textContent = tripRange(t) || "Dates fill in from the itinerary.";
+  $("#tripDates").textContent = (tripRange(t) || "Dates fill in from the itinerary.") + lastEditLine(t);
   renderCoops(); renderRoster(); renderItems(); renderPreview();
 }
 
@@ -1307,33 +1319,170 @@ async function loadCoopDir() {
 /* ================== Boot ================== */
 $$("[data-ic]").forEach((el) => (el.outerHTML = icon(el.dataset.ic)));
 $("#apList").innerHTML = Object.entries(window.AP || {}).map(([c, a]) => `<option value="${c}">${esc(a[0])}, ${esc(a[1])}</option>`).join("");
+/* ================== Shared sync (Google Sheet via Apps Script) ================== */
+// Every trip is one record ("trip:<id>"), plus "team" and "territories". Local edits push ~1s after
+// you stop typing; other people's edits are pulled every 10s (and whenever the tab comes back).
+// If two people edit the same trip at the same moment, the last save wins.
+const SYNC_URL = window.SYNC_URL || "";
+const SYNC_KEY = "nrtclog:sync";
+const SYNC = Object.assign({ rev: 0, snap: {}, meta: {} }, (() => { try { return JSON.parse(localStorage.getItem(SYNC_KEY)) || {}; } catch (e) { return {}; } })());
+const syncSave = () => { try { localStorage.setItem(SYNC_KEY, JSON.stringify({ rev: SYNC.rev, snap: SYNC.snap, meta: SYNC.meta })); } catch (e) {} };
+const myName = () => localStorage.getItem("nrtclog:me") || "";
+const isSample = (t) => t.sample || /\(example\)\s*$/i.test(t.title || "");
+
+async function api(action, body) {
+  const r = await fetch(SYNC_URL, { method: "POST", headers: { "Content-Type": "text/plain;charset=utf-8" },
+    body: JSON.stringify(Object.assign({ action, pass: localStorage.getItem("nrtclog:pass") || "", by: myName() }, body || {})) });
+  const j = await r.json();
+  if (!j.ok) { const e = new Error(j.error || "error"); e.code = j.error; throw e; }
+  return j;
+}
+function setSync(state, text) {
+  const el = $("#syncStatus"); if (!el || !SYNC_URL) return;
+  el.hidden = false; el.className = `sync-status ${state}`; el.textContent = text;
+}
+function lastEditLine(t) {
+  const m = SYNC.meta[`trip:${t.id}`]; if (!SYNC_URL || !m || !m.updated) return "";
+  const mins = Math.round((Date.now() - new Date(m.updated)) / 60000);
+  const ago = mins < 1 ? "just now" : mins < 60 ? `${mins} min ago` : mins < 1440 ? `${Math.round(mins / 60)} hr ago` : new Date(m.updated).toLocaleDateString("en-US", { month: "short", day: "numeric" });
+  return ` · last saved by ${m.by ? first(m.by) : "someone"} ${ago}`;
+}
+// What this browser has that differs from the last copy it saw on the server
+function localRecords() {
+  const recs = {};
+  DB.trips.filter((t) => !isSample(t)).forEach((t) => (recs[`trip:${t.id}`] = t));
+  recs.team = TEAM; recs.territories = TERR;
+  return recs;
+}
+function dirtyItems() {
+  const recs = localRecords(), out = [];
+  Object.entries(recs).forEach(([k, v]) => { const j = JSON.stringify(v); if (SYNC.snap[k] !== j) out.push({ key: k, value: v, json: j }); });
+  // trips deleted here that the server still has
+  Object.keys(SYNC.snap).forEach((k) => { if (k.startsWith("trip:") && !recs[k] && SYNC.snap[k] !== "null") out.push({ key: k, value: null, json: "null" }); });
+  return out;
+}
+let pushTimer = null, pushing = null, pulling = false, pendingRender = false, pollTimer = null;
+window.syncSoon = () => { if (!SYNC_URL || document.documentElement.classList.contains("locked")) return; clearTimeout(pushTimer); setSync("busy", "Saving…"); pushTimer = setTimeout(push, 900); };
+async function push() {
+  if (pushing) return pushing.then(push);
+  const items = dirtyItems(); if (!items.length) { setSync("ok", "Synced"); return; }
+  pushing = (async () => {
+    try {
+      const j = await api("put", { items: items.map(({ key, value }) => ({ key, value })) });
+      j.items.forEach((r) => { const it = items.find((x) => x.key === r.key); if (it && r.rev) { SYNC.snap[r.key] = it.json; SYNC.meta[r.key] = { rev: r.rev, updated: r.updated, by: myName() }; } });
+      syncSave(); setSync("ok", "Synced"); $("#tripDates").textContent = (tripRange(trip()) || "Dates fill in from the itinerary.") + lastEditLine(trip());
+    } catch (e) { handleSyncError(e); }
+  })();
+  await pushing; pushing = null;
+}
+function busyEditing() {
+  const a = document.activeElement;
+  return !!document.querySelector("dialog[open]") || !!(a && a.matches("input, textarea, select") && a.closest(".editor"));
+}
+async function pull() {
+  if (!SYNC_URL || pulling || document.documentElement.classList.contains("locked")) return;
+  pulling = true;
+  try {
+    const firstSync = !SYNC.rev;
+    const j = await api("list", { since: SYNC.rev });
+    const dirty = new Set(dirtyItems().map((x) => x.key));
+    let changed = false;
+    j.items.forEach((r) => {
+      const json = JSON.stringify(r.value);
+      SYNC.meta[r.key] = { rev: r.rev, updated: r.updated, by: r.by };
+      if (SYNC.snap[r.key] === json) return;                        // already have it (e.g. our own save)
+      const settingsKey = r.key === "team" || r.key === "territories";
+      if (dirty.has(r.key) && !(firstSync && settingsKey)) return;  // our unsaved edit wins; it pushes next
+      SYNC.snap[r.key] = json; changed = true;
+      if (r.key === "team" && r.value) { TEAM = r.value; localStorage.setItem(TEAM_KEY, JSON.stringify(TEAM)); }
+      else if (r.key === "territories" && r.value) { TERR = r.value; localStorage.setItem(TERR_KEY, JSON.stringify(TERR)); }
+      else if (r.key.startsWith("trip:")) {
+        const id = r.key.slice(5), i = DB.trips.findIndex((t) => t.id === id);
+        if (!r.value || r.value.deleted) { if (i >= 0) DB.trips.splice(i, 1); }
+        else if (i >= 0) DB.trips[i] = r.value; else DB.trips.push(r.value);
+      }
+    });
+    SYNC.rev = Math.max(SYNC.rev, j.rev || 0);
+    if (!DB.trips.length) DB.trips.push(newTrip());
+    if (!DB.trips.some((t) => t.id === DB.current) || (isSample(trip()) && DB.trips.some((t) => !isSample(t)) && firstSync)) DB.current = (DB.trips.find((t) => !isSample(t)) || DB.trips[0]).id;
+    try { localStorage.setItem(STORE_KEY, JSON.stringify(DB)); } catch (e) {}
+    syncSave();
+    if (changed) { if (busyEditing()) pendingRender = true; else render(); }
+    if (dirtyItems().length) await push(); else setSync("ok", "Synced");
+  } catch (e) { handleSyncError(e); }
+  pulling = false;
+}
+function handleSyncError(e) {
+  if (e.code === "passcode") { localStorage.removeItem("nrtclog:pass"); lockPage("The team passcode changed — enter the new one."); return; }
+  setSync("off", "Offline — saved on this device");
+}
+// Re-render deferred remote changes once the user finishes what they're doing
+document.addEventListener("focusout", () => setTimeout(() => { if (pendingRender && !busyEditing()) { pendingRender = false; render(); } }, 50));
+$$("dialog").forEach((d) => d.addEventListener("close", () => { if (pendingRender) { pendingRender = false; setTimeout(render, 0); } }));
+function startSync() {
+  if (!SYNC_URL) return;
+  setSync("busy", "Syncing…");
+  pull();
+  clearInterval(pollTimer);
+  pollTimer = setInterval(() => { if (document.visibilityState === "visible") pull(); }, 10000);
+}
+document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible") pull(); });
+window.addEventListener("online", () => pull());
+
 /* ================== Passcode gate ================== */
-// Passcode is checked by its SHA-256 hash (not stored in plain text). To change it, swap PASS_HASH in <head>.
+// Without a backend the passcode is checked here by its SHA-256 hash; with one, the Apps Script checks it.
+const GATE_HASH = "e3bafff2e5fea0daa2706b58b5cb99386d422f056255529a74514244a1675171";
+function lockPage(msg) {
+  localStorage.removeItem("nrtclog:unlock");
+  document.documentElement.classList.add("locked");
+  prepGate(); $("#gateErr").textContent = msg || "";
+  setTimeout(() => $("#gatePass").focus(), 50);
+}
+function prepGate() {
+  const sel = $("#gateMe");
+  if (!SYNC_URL) return;
+  sel.style.display = "";
+  sel.innerHTML = `<option value="">Who are you?</option>` + TEAM.map((p) => `<option ${p.name === myName() ? "selected" : ""}>${esc(p.name)}</option>`).join("");
+}
 (function () {
-  const HASH = "e3bafff2e5fea0daa2706b58b5cb99386d422f056255529a74514244a1675171";
   const FAILS = "nrtclog:fails";
   const sha = async (txt) => [...new Uint8Array(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(txt)))].map((b) => b.toString(16).padStart(2, "0")).join("");
+  prepGate();
   $("#gateForm").addEventListener("submit", async (e) => {
     e.preventDefault();
     const f = JSON.parse(localStorage.getItem(FAILS) || '{"n":0,"until":0}');
     if (Date.now() < f.until) { $("#gateErr").textContent = `Too many tries — wait ${Math.ceil((f.until - Date.now()) / 60000)} min.`; return; }
-    const ok = (await sha($("#gatePass").value.trim().toUpperCase())) === HASH;
+    const pass = $("#gatePass").value.trim().toUpperCase();
+    if (SYNC_URL && !$("#gateMe").value) { $("#gateErr").textContent = "Pick your name so the team knows who changed what."; return; }
+    let ok = false;
+    if (SYNC_URL) {
+      localStorage.setItem("nrtclog:pass", pass);
+      try { await api("ping"); ok = true; }
+      catch (err) {
+        if (err.code === "passcode") ok = false;
+        else ok = (await sha(pass)) === GATE_HASH; // backend unreachable: let them in to work offline
+      }
+      if (!ok) localStorage.removeItem("nrtclog:pass");
+      else localStorage.setItem("nrtclog:me", $("#gateMe").value);
+    } else ok = (await sha(pass)) === GATE_HASH;
     if (ok) {
-      localStorage.setItem("nrtclog:unlock", HASH); localStorage.removeItem(FAILS);
-      document.documentElement.classList.remove("locked"); $("#gatePass").value = ""; $("#gateErr").textContent = ""; render();
+      localStorage.setItem("nrtclog:unlock", GATE_HASH); localStorage.removeItem(FAILS);
+      document.documentElement.classList.remove("locked"); $("#gatePass").value = ""; $("#gateErr").textContent = "";
+      render(); startSync();
     } else {
       f.n++; if (f.n >= 10) { f.until = Date.now() + 15 * 60000; f.n = 0; }
       localStorage.setItem(FAILS, JSON.stringify(f));
       $("#gateErr").textContent = "That's not it."; $("#gatePass").select();
     }
   });
-  $("#lockBtn").onclick = () => { localStorage.removeItem("nrtclog:unlock"); document.documentElement.classList.add("locked"); setTimeout(() => $("#gatePass").focus(), 50); };
+  $("#lockBtn").onclick = () => { localStorage.removeItem("nrtclog:pass"); lockPage(); };
 })();
 
 importFromHash();
 render();
 loadCoopDir();
 refreshOldDrives();
+if (!document.documentElement.classList.contains("locked")) startSync();
 </script>
 </body>
 </html>

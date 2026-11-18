@@ -71,8 +71,11 @@ travel itineraries and pasting them into Outlook.
 
 - `nrtclogistics/index.html` — the whole app; `airports.js` — US/CA/PR airports
   with scheduled service (OurAirports) for codes + coordinates.
-- Trips live in the browser (localStorage). Backup ▾ exports/imports JSON and
-  makes share links (`#trip=…`) that open a copy of a trip for a teammate.
+- Shared data: `nrtclogistics/apps-script/Code.gs` runs in a Google Sheet (Apps Script web
+  app). Put its URL in `window.SYNC_URL` in the page's `<head>`; the passcode is then checked
+  by the script. Edits push ~1s after typing stops, others' edits pull every 10s; last save wins.
+  With `SYNC_URL` empty, trips stay in the browser (localStorage) only.
+- Backup ▾ exports/imports JSON and makes share links (`#trip=…`).
 - Drive times: OpenStreetMap Nominatim (geocoding) + the public OSRM router;
   falls back to a straight-line estimate if routing is unreachable.
 - Co-op name autocomplete reads the same published co-op CSV as the main page.
