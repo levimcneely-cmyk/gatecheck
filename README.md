@@ -66,17 +66,25 @@ then open `http://localhost:8000`.
 
 ## NRTC Logistics Hub (`/nrtclogistics/`)
 
-Unlinked, `noindex` trip planner at `/gatecheck/nrtclogistics/` for building
-travel itineraries and pasting them into Outlook.
+Unlinked, `noindex`, passcode-protected trip planner at `/gatecheck/nrtclogistics/`: builds team
+itineraries and copies them into Outlook.
 
-- `nrtclogistics/index.html` — the whole app; `airports.js` — US/CA/PR airports
-  with scheduled service (OurAirports) for codes + coordinates.
-- Shared data: `nrtclogistics/apps-script/Code.gs` runs in a Google Sheet (Apps Script web
-  app). Put its URL in `window.SYNC_URL` in the page's `<head>`; the passcode is then checked
-  by the script. Edits push ~1s after typing stops, others' edits pull every 10s; last save wins.
-  With `SYNC_URL` empty, trips stay in the browser (localStorage) only.
-- Backup ▾ exports/imports JSON and makes share links (`#trip=…`).
-- Drive times: OpenStreetMap Nominatim (geocoding) + the public OSRM router;
-  falls back to a straight-line estimate if routing is unreachable.
-- Co-op name autocomplete reads the same published co-op CSV as the main page.
-- Team list + home airports are edited under **Team** (stored per browser).
+| File | What it holds |
+|---|---|
+| `index.html` | Page markup; `window.SYNC_URL` (Apps Script URL) in `<head>` |
+| `style.css` | All styles (NRTC brand colors at the top, phone layout, print) |
+| `js/core.js` | Helpers, storage, co-op ids, places, geocoding, drive times, time zones, shared lookup cache |
+| `js/merge.js` | Three-way merge so two people editing one trip don't erase each other |
+| `js/itinerary.js` | Items → ordered rows; email HTML/text; one-person view; mileage |
+| `js/ui.js` | Rendering, trip editing, item forms, copy/print |
+| `js/import.js` | Reading confirmations (screenshot/PDF) |
+| `js/views.js` | Add to calendar (.ics), Trips overview, mileage rate |
+| `js/app.js` | Team, backup, sync, passcode gate, boot |
+| `airports.js`, `parse.js` | Airport table (OurAirports); confirmation text parser |
+| `apps-script/Code.gs` | Backend in the Google Sheet: passcode, Store tab, conflict-checked saves, Drive OCR |
+| `dev/` | Tests — run them before pushing (see `dev/README.md`) |
+
+- Data: Sheet tab `Store`, one row per record (`trip:<id>`, `team`, `territories`, `cache`).
+  Saves carry the version they were made on; a save on an outdated copy is refused and merged.
+- Outside services (all free, no keys): Valhalla/OSRM drive times, Nominatim/Open-Meteo/Photon
+  places, Open-Meteo time zones, Google Drive text recognition (in the Apps Script).
