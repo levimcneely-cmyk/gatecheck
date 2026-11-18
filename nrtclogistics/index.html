@@ -91,8 +91,11 @@ label.f { display: block; font-size: 12.5px; font-weight: 600; color: var(--mute
 .coop-row { padding: 10px 0; border-top: 1px dashed var(--line); }
 .coop-row:first-child { border-top: 0; padding-top: 0; }
 
-.add-bar { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
-@media (min-width: 1180px), (min-width: 640px) and (max-width: 980px) { .add-bar { grid-template-columns: repeat(6, auto); } }
+/* Sized to the card, not the window, so the buttons can never spill past its edge */
+.items-card { container-type: inline-size; }
+.add-bar { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
+.add-bar .btn { min-width: 0; padding: 7px 8px; }
+@container (min-width: 720px) { .add-bar { grid-template-columns: repeat(6, minmax(0, 1fr)); } }
 .add-bar .btn { flex: 1 1 auto; justify-content: center; }
 
 .day { margin-top: 14px; }
@@ -188,7 +191,7 @@ dialog::backdrop { background: rgba(16, 24, 34, .35); }
       </div>
     </div>
 
-    <div class="card">
+    <div class="card items-card">
       <h2>Itinerary</h2>
       <div class="add-bar">
         <button class="btn" data-add="flight"><span class="ic ic-flight" data-ic="flight"></span>Flight</button>
