@@ -8,23 +8,34 @@
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🧳</text></svg>">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700;800&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Questrial&display=swap" rel="stylesheet">
 <style>
 :root {
-  --bg: #f5f3ee;
+  /* NRTC base brand color set */
+  --obsidian: #191919;
+  --charcoal: #333333;
+  --strawberry: #B21424;
+  --nrtc-red: #E31F26;
+  --aqua: #4BB9B5;
+  --silver: #E5E5E5;
+  --mint: #A6DCE0;
+  --sky: #87C1C9;
+  --breeze: #006666;
+
+  --bg: #F4F4F4;
   --card: #ffffff;
-  --ink: #16202c;
-  --ink-2: #33465f;
-  --muted: #66758a;
-  --line: #e1ddd4;
-  --line-2: #cfc9bc;
-  --amber: #ffb703;
-  --amber-ink: #8a5a00;
-  --amber-soft: #fff4d6;
-  --teal: #0f766e;
-  --coral: #be123c;
-  --font-display: "Space Mono", ui-monospace, monospace;
-  --font-body: "Archivo", system-ui, sans-serif;
+  --ink: var(--obsidian);
+  --ink-2: var(--charcoal);
+  --muted: #666666;
+  --line: var(--silver);
+  --line-2: #CFCFCF;
+  --amber: var(--nrtc-red);
+  --amber-ink: var(--breeze);
+  --amber-soft: #EEF8F8;
+  --teal: var(--breeze);
+  --coral: var(--strawberry);
+  --font-display: "Century Gothic", "CenturyGothic", "Questrial", "AppleGothic", sans-serif;
+  --font-body: "Century Gothic", "CenturyGothic", "Questrial", "AppleGothic", sans-serif;
 }
 * { box-sizing: border-box; }
 html { color-scheme: light; }
@@ -32,18 +43,18 @@ body { margin: 0; background: var(--bg); color: var(--ink); font-family: var(--f
 button, input, select, textarea { font: inherit; color: inherit; }
 a { color: var(--teal); }
 
-.topbar { border-bottom: 1px solid var(--line); background: var(--card); }
+.topbar { border-bottom: 4px solid var(--nrtc-red); background: var(--card); }
 .topbar .in { max-width: 1320px; margin: 0 auto; padding: 14px 20px; display: flex; flex-wrap: wrap; align-items: center; gap: 12px; }
 .brand { display: flex; align-items: baseline; gap: 8px; margin-right: auto; }
-.brand-mark { color: var(--amber); font-size: 20px; transform: rotate(-8deg); display: inline-block; }
-.brand-name { font-family: var(--font-display); font-weight: 700; font-size: 19px; letter-spacing: .01em; }
+.brand-mark { background: var(--nrtc-red); color: #fff; font-weight: 700; font-size: 14px; letter-spacing: .06em; padding: 3px 8px; border-radius: 4px; align-self: center; }
+.brand-name { font-family: var(--font-display); font-weight: 700; font-size: 19px; }
 .brand-sub { font-size: 12.5px; color: var(--muted); }
 .brand-sub a { color: var(--muted); }
 
 .btn { border: 1px solid var(--line-2); background: var(--card); border-radius: 8px; padding: 7px 12px; font-size: 13.5px; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
 .btn:hover { border-color: var(--ink-2); }
-.btn.primary { background: var(--amber); border-color: var(--amber); color: #1b1300; }
-.btn.primary:hover { background: #ffc633; }
+.btn.primary { background: var(--nrtc-red); border-color: var(--nrtc-red); color: #fff; }
+.btn.primary:hover { background: var(--strawberry); }
 .btn.ghost { border-color: transparent; background: transparent; }
 .btn.danger { color: var(--coral); }
 .btn.sm { padding: 4px 8px; font-size: 12.5px; }
@@ -56,11 +67,11 @@ select.trip-select { border: 1px solid var(--line-2); border-radius: 8px; paddin
 
 .card { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 18px; }
 .card + .card { margin-top: 16px; }
-.card h2 { margin: 0 0 12px; font-size: 13px; font-family: var(--font-display); letter-spacing: .1em; text-transform: uppercase; color: var(--amber-ink); }
+.card h2 { margin: 0 0 12px; font-size: 13px; font-weight: 700; font-family: var(--font-display); letter-spacing: .1em; text-transform: uppercase; color: var(--amber-ink); }
 
 label.f { display: block; font-size: 12.5px; font-weight: 600; color: var(--muted); margin: 0 0 4px; }
 .in-text, .f-input { width: 100%; border: 1px solid var(--line-2); border-radius: 8px; padding: 8px 10px; background: #fff; font-size: 14px; }
-.in-text:focus, .f-input:focus, select:focus, textarea:focus { outline: 2px solid var(--amber); outline-offset: 0; border-color: var(--amber); }
+.in-text:focus, .f-input:focus, select:focus, textarea:focus { outline: 2px solid var(--aqua); outline-offset: 0; border-color: var(--aqua); }
 .trip-title { font-size: 20px; font-weight: 700; border: 1px solid transparent; padding: 4px 8px; margin-left: -8px; width: calc(100% + 8px); }
 .trip-title:hover { border-color: var(--line); }
 
@@ -80,14 +91,22 @@ label.f { display: block; font-size: 12.5px; font-weight: 600; color: var(--mute
 .coop-row { padding: 10px 0; border-top: 1px dashed var(--line); }
 .coop-row:first-child { border-top: 0; padding-top: 0; }
 
-.add-bar { display: flex; flex-wrap: wrap; gap: 6px; }
+.add-bar { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+@media (min-width: 1180px), (min-width: 640px) and (max-width: 980px) { .add-bar { grid-template-columns: repeat(6, auto); } }
 .add-bar .btn { flex: 1 1 auto; justify-content: center; }
 
 .day { margin-top: 14px; }
-.day-h { font-family: var(--font-display); font-size: 12.5px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--ink-2); border-bottom: 1px solid var(--line); padding-bottom: 4px; margin-bottom: 4px; }
-.it { display: grid; grid-template-columns: 26px 96px minmax(0,1fr) auto; gap: 8px; align-items: center; padding: 6px 4px; border-radius: 8px; }
+.day-h { font-family: var(--font-display); font-size: 12.5px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--breeze); border-bottom: 2px solid var(--aqua); padding-bottom: 4px; margin-bottom: 4px; }
+.it { display: grid; grid-template-columns: 34px 96px minmax(0,1fr) auto; gap: 8px; align-items: center; padding: 6px 4px; border-radius: 8px; }
 .it:hover { background: var(--amber-soft); }
-.it .ico { text-align: center; }
+.it .ico { display: flex; justify-content: center; }
+/* Icon style per the NRTC icon set: black glyph in a color-coded circle */
+.ic { display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; border-radius: 50%; flex: none; background: var(--c, var(--silver)); }
+.ic svg { width: 15px; height: 15px; fill: none; stroke: #000; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.add-bar .ic { width: 22px; height: 22px; }
+.add-bar .ic svg { width: 12px; height: 12px; }
+.ic-flight { --c: var(--sky); } .ic-rental { --c: var(--mint); } .ic-hotel { --c: var(--aqua); }
+.ic-drive { --c: var(--silver); } .ic-meeting { --c: var(--nrtc-red); } .ic-note { --c: #fff; box-shadow: inset 0 0 0 1.5px var(--line-2); }
 .it .t { font-family: var(--font-display); font-size: 12.5px; color: var(--muted); }
 .it .w { font-size: 14px; min-width: 0; }
 .it .w .who { font-weight: 700; }
@@ -112,8 +131,8 @@ dialog::backdrop { background: rgba(16, 24, 34, .35); }
 .dlg-h h3 { margin: 0; font-size: 17px; }
 .dlg-b { padding: 16px 18px 6px; }
 .dlg-f { display: flex; justify-content: space-between; gap: 8px; padding: 12px 18px; border-top: 1px solid var(--line); position: sticky; bottom: 0; background: #fff; }
-.calc { font-size: 13px; padding: 8px 10px; border-radius: 8px; background: #f2f7f6; color: var(--teal); margin-top: 2px; }
-.calc.warn { background: #fff1f2; color: var(--coral); }
+.calc { font-size: 13px; padding: 8px 10px; border-radius: 8px; background: #EEF8F8; color: var(--teal); margin-top: 2px; }
+.calc.warn { background: #FCEBEC; color: var(--coral); }
 
 .toast { position: fixed; left: 50%; bottom: 22px; transform: translateX(-50%) translateY(30px); opacity: 0; background: var(--ink); color: #fff; padding: 10px 16px; border-radius: 10px; font-size: 14px; transition: .2s; pointer-events: none; z-index: 50; }
 .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
@@ -138,8 +157,8 @@ dialog::backdrop { background: rgba(16, 24, 34, .35); }
 <header class="topbar">
   <div class="in">
     <div class="brand">
-      <span class="brand-mark">✈</span>
-      <span class="brand-name">NRTC Logistics Hub</span>
+      <span class="brand-mark">NRTC</span>
+      <span class="brand-name">Logistics Hub</span>
       <span class="brand-sub">· backstage at <a href="../">Gate Check</a></span>
     </div>
     <select id="tripSelect" class="trip-select" aria-label="Trip"></select>
@@ -171,12 +190,12 @@ dialog::backdrop { background: rgba(16, 24, 34, .35); }
     <div class="card">
       <h2>Itinerary</h2>
       <div class="add-bar">
-        <button class="btn" data-add="flight">✈️ Flight</button>
-        <button class="btn" data-add="rental">🚗 Rental car</button>
-        <button class="btn" data-add="hotel">🏨 Hotel</button>
-        <button class="btn" data-add="drive">🛣️ Drive</button>
-        <button class="btn" data-add="meeting">📅 Meeting</button>
-        <button class="btn" data-add="note">📝 Note</button>
+        <button class="btn" data-add="flight"><span class="ic ic-flight" data-ic="flight"></span>Flight</button>
+        <button class="btn" data-add="rental"><span class="ic ic-rental" data-ic="rental"></span>Rental car</button>
+        <button class="btn" data-add="hotel"><span class="ic ic-hotel" data-ic="hotel"></span>Hotel</button>
+        <button class="btn" data-add="drive"><span class="ic ic-drive" data-ic="drive"></span>Drive</button>
+        <button class="btn" data-add="meeting"><span class="ic ic-meeting" data-ic="meeting"></span>Meeting</button>
+        <button class="btn" data-add="note"><span class="ic ic-note" data-ic="note"></span>Note</button>
       </div>
       <div id="items"></div>
     </div>
@@ -188,9 +207,9 @@ dialog::backdrop { background: rgba(16, 24, 34, .35); }
   <section class="card preview-card">
     <h2>Email preview</h2>
     <div class="pv-tools">
-      <button class="btn primary" id="copyHtml">📋 Copy for email</button>
+      <button class="btn primary" id="copyHtml">Copy for email</button>
       <button class="btn" id="copyText">Copy as plain text</button>
-      <button class="btn" id="printBtn">🖨 Print</button>
+      <button class="btn" id="printBtn">Print</button>
     </div>
     <div class="pv-opts">
       <label><input type="checkbox" id="optConf" checked> Confirmation #s</label>
@@ -240,9 +259,9 @@ dialog::backdrop { background: rgba(16, 24, 34, .35); }
   <div class="dlg-b">
     <p class="hint" style="margin:0 0 12px">Trips are saved in this browser. Export a backup now and then, or send a share link so a teammate can open (and keep) a copy of a trip.</p>
     <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:16px">
-      <button class="btn" id="shareLink">🔗 Copy share link for this trip</button>
-      <button class="btn" id="exportAll">⬇ Export all trips (.json)</button>
-      <label class="btn">⬆ Import .json<input type="file" id="importFile" accept="application/json,.json" hidden></label>
+      <button class="btn" id="shareLink">Copy share link for this trip</button>
+      <button class="btn" id="exportAll">Export all trips (.json)</button>
+      <label class="btn">Import .json<input type="file" id="importFile" accept="application/json,.json" hidden></label>
     </div>
   </div>
 </dialog>
@@ -277,14 +296,15 @@ const DEFAULT_TEAM = [
 ];
 
 const TYPES = {
-  flight: { icon: "✈️", label: "Flight" },
-  rental: { icon: "🚗", label: "Rental car" },
-  hotel: { icon: "🏨", label: "Hotel" },
-  drive: { icon: "🛣️", label: "Drive" },
-  meeting: { icon: "📅", label: "Meeting" },
-  note: { icon: "📝", label: "Note" },
+  flight: { label: "Flight", svg: '<path d="M17.8 19.2 16 11l3.5-3.5C21 6 21.5 4 21 3c-1-.5-3 0-4.5 1.5L13 8 4.8 6.2c-.5-.1-.9.1-1.1.5l-.3.5c-.2.5-.1 1 .3 1.3L9 12l-2 3H4l-1 1 3 2 2 3 1-1v-3l3-2 3.5 5.3c.3.4.8.5 1.3.3l.5-.2c.4-.3.6-.7.5-1.2z"/>' },
+  rental: { label: "Rental car", svg: '<path d="M19 17h2c.6 0 1-.4 1-1v-3c0-.9-.7-1.7-1.5-1.9C18.7 10.6 16 10 16 10s-1.3-1.4-2.2-2.3c-.5-.4-1.1-.7-1.8-.7H5c-.6 0-1.1.4-1.4.9l-1.4 2.9A3.7 3.7 0 0 0 2 12v4c0 .6.4 1 1 1h2"/><circle cx="7" cy="17" r="2"/><path d="M9 17h6"/><circle cx="17" cy="17" r="2"/>' },
+  hotel: { label: "Hotel", svg: '<path d="M2 4v16"/><path d="M2 8h18a2 2 0 0 1 2 2v10"/><path d="M2 17h20"/><path d="M6 8v9"/>' },
+  drive: { label: "Drive", svg: '<circle cx="6" cy="19" r="3"/><path d="M9 19h8.5a3.5 3.5 0 0 0 0-7h-11a3.5 3.5 0 0 1 0-7H15"/><circle cx="18" cy="5" r="3"/>' },
+  meeting: { label: "Meeting", svg: '<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>' },
+  note: { label: "Note", svg: '<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="M16 13H8"/><path d="M16 17H8"/>' },
 };
 
+const icon = (type) => `<span class="ic ic-${type}"><svg viewBox="0 0 24 24" aria-hidden="true">${TYPES[type].svg}</svg></span>`;
 /* ================== Small helpers ================== */
 const $ = (s, r = document) => r.querySelector(s);
 const $$ = (s, r = document) => [...r.querySelectorAll(s)];
@@ -553,13 +573,13 @@ function subjectLine(t) {
   return `Travel: ${bits.join(" ") || "Trip"}${r ? ` — ${r}` : ""}`;
 }
 function emailHTML(t, opts) {
-  const F = "font-family:Calibri,Arial,Helvetica,sans-serif;font-size:11pt;";
+  const F = "font-family:'Century Gothic',Calibri,Arial,Helvetica,sans-serif;font-size:10.5pt;";
   const days = groupDays(buildRows(t, opts));
   const anyWho = days.some((d) => d.rows.some((r) => r.who));
   const whoW = Math.max(60, ...days.flatMap((d) => d.rows.map((r) => (r.who || "").length * 8 + 12)));
   let h = `<div style="${F}color:#1a1a1a;">`;
   const coops = t.coops.filter((c) => c.name);
-  if (t.title) h += `<p style="${F}margin:0 0 2px;font-size:14pt;font-weight:bold;color:#16202c;">${esc(t.title.replace(/\s*\(example\)$/i, ""))}</p>`;
+  if (t.title) h += `<p style="${F}margin:0 0 2px;font-size:14pt;font-weight:bold;color:#191919;border-left:4px solid #E31F26;padding-left:8px;">${esc(t.title.replace(/\s*\(example\)$/i, ""))}</p>`;
   const meta = [];
   const range = tripRange(t); if (range) meta.push(esc(range));
   if (coops.length) meta.push(coops.map((c) => `${esc(c.name)}${c.town ? ` (${esc([c.town, c.state].filter(Boolean).join(", "))})` : ""}`).join("; "));
@@ -568,13 +588,13 @@ function emailHTML(t, opts) {
   if (t.notes) h += `<p style="${F}margin:8px 0 0;">${esc(t.notes).replace(/\n/g, "<br>")}</p>`;
   if (!days.length) h += `<p style="${F}color:#888;margin:14px 0 0;">Nothing on the itinerary yet.</p>`;
   days.forEach((d) => {
-    h += `<p style="${F}margin:16px 0 4px;padding:0 0 3px;font-weight:bold;color:#16202c;border-bottom:1px solid #c9ced6;">${esc(fmtDay(d.date))}</p>`;
+    h += `<p style="${F}margin:16px 0 4px;padding:0 0 3px;font-weight:bold;color:#006666;border-bottom:2px solid #4BB9B5;">${esc(fmtDay(d.date))}</p>`;
     h += `<table cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse;${F}">`;
     d.rows.forEach((r) => {
       h += `<tr>`;
-      h += `<td width="118" style="${F}width:118px;padding:3px 12px 3px 0;vertical-align:top;white-space:nowrap;color:#555;">${esc(r.time)}</td>`;
-      if (anyWho) h += `<td width="${whoW}" style="${F}width:${whoW}px;padding:3px 12px 3px 0;vertical-align:top;white-space:nowrap;font-weight:bold;">${r.who ? esc(r.who) : ""}</td>`;
-      h += `<td style="${F}padding:3px 0;vertical-align:top;">${esc(r.what)}${r.detail ? `<span style="color:#666;"> &mdash; ${esc(r.detail)}</span>` : ""}</td>`;
+      h += `<td width="118" style="${F}width:118px;padding:3px 12px 3px 0;vertical-align:top;white-space:nowrap;color:#333333;">${esc(r.time)}</td>`;
+      if (anyWho) h += `<td width="${whoW}" style="${F}width:${whoW}px;padding:3px 12px 3px 0;vertical-align:top;white-space:nowrap;font-weight:bold;color:#B21424;">${r.who ? esc(r.who) : ""}</td>`;
+      h += `<td style="${F}padding:3px 0;vertical-align:top;">${esc(r.what)}${r.detail ? `<span style="color:#666666;"> &mdash; ${esc(r.detail)}</span>` : ""}</td>`;
       h += `</tr>`;
     });
     h += `</table>`;
@@ -641,7 +661,7 @@ function renderItems() {
     <div class="day"><div class="day-h">${esc(fmtDay(d.date))}</div>
     ${d.rows.map((r) => `
       <div class="it">
-        <span class="ico">${TYPES[r.type].icon}</span>
+        <span class="ico">${icon(r.type)}</span>
         <span class="t">${esc(r.time)}</span>
         <span class="w">${r.who ? `<span class="who">${esc(r.who)}</span> · ` : ""}${esc(r.what)}${r.detail ? `<div class="d">${esc(r.detail)}</div>` : ""}</span>
         <span class="acts">
@@ -997,6 +1017,7 @@ async function loadCoopDir() {
 }
 
 /* ================== Boot ================== */
+$$("[data-ic]").forEach((el) => (el.outerHTML = icon(el.dataset.ic)));
 $("#apList").innerHTML = Object.entries(window.AP || {}).map(([c, a]) => `<option value="${c}">${esc(a[0])}, ${esc(a[1])}</option>`).join("");
 importFromHash();
 render();
