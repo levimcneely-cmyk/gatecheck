@@ -780,6 +780,7 @@ function subjectLine(t) {
   return `Travel: ${bits.join(" ") || "Trip"}${r ? ` — ${r}` : ""}`;
 }
 function emailHTML(t, opts) {
+  // Bold only on: day headers and co-op meetings.
   // Built for Outlook's Word engine: every run of text is its own <span> with an explicit weight,
   // and bold only ever comes from <b> around that exact text — so nothing bleeds into the rest.
   const FONT = "font-family:'Century Gothic',Calibri,Arial,Helvetica,sans-serif;";
@@ -793,15 +794,15 @@ function emailHTML(t, opts) {
   const whoW = Math.max(60, ...days.flatMap((d) => d.rows.map((r) => (r.who || "").length * 8 + 12)));
   const coops = t.coops.filter((c) => c.name);
   let h = `<div>`;
-  if (t.title) h += P(sp(esc(t.title.replace(/\s*\(example\)$/i, "")), { size: "14pt", color: "#191919", bold: true }), "border-left:4px solid #E31F26;padding-left:8px;");
+  if (t.title) h += P(sp(esc(t.title.replace(/\s*\(example\)$/i, "")), { size: "14pt", color: "#191919" }), "border-left:4px solid #E31F26;padding-left:8px;");
   const meta = [];
   const range = tripRange(t); if (range) meta.push(esc(range));
   if (coops.length) meta.push(coops.map((c) => `${esc(c.name)}${c.town ? ` (${esc([c.town, c.state].filter(Boolean).join(", "))})` : ""}`).join("; "));
   const rbms = [...new Set(coops.map(coopRBM).filter(Boolean))];
   const gray = { color: "#444444" };
   if (meta.length) h += P(sp(meta.join(" &nbsp;|&nbsp; "), gray));
-  if (rbms.length) h += P(sp("RBM:", { ...gray, bold: true }) + sp(" " + rbms.map(esc).join(", "), gray));
-  if (t.travelers.length) h += P(sp("Travelers:", { ...gray, bold: true }) + sp(" " + t.travelers.map(esc).join(", "), gray));
+  if (rbms.length) h += P(sp("RBM:", gray) + sp(" " + rbms.map(esc).join(", "), gray));
+  if (t.travelers.length) h += P(sp("Travelers:", gray) + sp(" " + t.travelers.map(esc).join(", "), gray));
   if (t.notes) h += P(sp(esc(t.notes).replace(/\n/g, "<br>")), "margin-top:8px;");
   if (!days.length) h += P(sp("Nothing on the itinerary yet.", { color: "#888888" }), "margin-top:14px;");
   const td = (inner, style) => `<td style="padding:3px 12px 3px 0;vertical-align:top;${style || ""}">${inner || "&nbsp;"}</td>`;
@@ -811,8 +812,8 @@ function emailHTML(t, opts) {
     d.rows.forEach((r) => {
       h += `<tr>`;
       h += td(r.time ? sp(esc(r.time), { color: "#333333" }) : "", `width:118px;white-space:nowrap;`).replace("<td ", '<td width="118" ');
-      if (anyWho) h += td(r.who ? sp(esc(r.who), { color: "#B21424", bold: true }) : "", `width:${whoW}px;white-space:nowrap;`).replace("<td ", `<td width="${whoW}" `);
-      h += td(sp(esc(r.what)) + (r.detail ? sp(" &mdash; " + esc(r.detail), { color: "#666666" }) : ""), "padding-right:0;");
+      if (anyWho) h += td(r.who ? sp(esc(r.who), { color: "#B21424" }) : "", `width:${whoW}px;white-space:nowrap;`).replace("<td ", `<td width="${whoW}" `);
+      h += td(sp(esc(r.what), { bold: r.type === "meeting" && !!r.item.coop }) + (r.detail ? sp(" &mdash; " + esc(r.detail), { color: "#666666" }) : ""), "padding-right:0;");
       h += `</tr>`;
     });
     h += `</table>`;
