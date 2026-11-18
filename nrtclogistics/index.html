@@ -575,15 +575,43 @@ function haversineMi(a, b) {
   const h = Math.sin(dLat / 2) ** 2 + Math.cos(rad(a.lat)) * Math.cos(rad(b.lat)) * Math.sin(dLon / 2) ** 2;
   return 2 * R * Math.asin(Math.sqrt(h));
 }
+const ROUTER_VERSION = 2;
+// OSRM's public car profile drives at ~80% of posted limits, so it runs ~20% slow on interstate trips
+// compared with Google. It's only the backup now, with that correction applied.
+const OSRM_CORRECTION = 0.82;
 async function routeTime(a, b) {
+  // 1) Valhalla (FOSSGIS — the router behind openstreetmap.org directions)
   try {
-    const r = await fetch(`https://router.project-osrm.org/route/v1/driving/${a.lon},${a.lat};${b.lon},${b.lat}?overview=false`);
-    const j = await r.json();
-    if (j.code === "Ok" && j.routes[0]) return { minutes: Math.round(j.routes[0].duration / 60), miles: Math.round(j.routes[0].distance / 1609.34), est: false };
+    const q = { locations: [{ lat: a.lat, lon: a.lon }, { lat: b.lat, lon: b.lon }], costing: "auto", units: "miles" };
+    const j = await getJSON(`https://valhalla1.openstreetmap.de/route?json=${encodeURIComponent(JSON.stringify(q))}`);
+    const sm = j.trip && j.trip.summary;
+    if (sm && sm.time) return { minutes: Math.round(sm.time / 60), miles: Math.round(sm.length), est: false, src: "valhalla" };
   } catch (e) {}
-  // Fallback: straight-line × 1.25 for roads, at ~58 mph average
+  // 2) OSRM, speed-corrected
+  try {
+    const j = await getJSON(`https://router.project-osrm.org/route/v1/driving/${a.lon},${a.lat};${b.lon},${b.lat}?overview=false`);
+    if (j.code === "Ok" && j.routes[0]) return { minutes: Math.round(j.routes[0].duration / 60 * OSRM_CORRECTION), miles: Math.round(j.routes[0].distance / 1609.34), est: false, src: "osrm" };
+  } catch (e) {}
+  // 3) Straight line × 1.25 for roads, at ~62 mph
   const mi = haversineMi(a, b) * 1.25;
-  return { minutes: Math.round(mi / 58 * 60), miles: Math.round(mi), est: true };
+  return { minutes: Math.round(mi / 62 * 60), miles: Math.round(mi), est: true, src: "estimate" };
+}
+
+// Re-run drive times saved by the older, slower routing (skips any drive time you typed yourself).
+async function refreshOldDrives() {
+  let changed = 0;
+  for (const t of DB.trips) for (const it of t.items) {
+    if (it.type !== "drive" || it.manual || it.minutes == null || it.router === ROUTER_VERSION) continue;
+    const A = resolvePlace(t, it.from), B = resolvePlace(t, it.to);
+    if (!A || !B) continue;
+    await Promise.all([ensureCoords(A, A.q), ensureCoords(B, B.q)]);
+    if (A.lat == null || B.lat == null) continue;
+    const r = await routeTime(A, B);
+    if (r.est) continue; // routing down right now — try again next visit
+    Object.assign(it, { minutes: r.minutes, miles: r.miles, est: false, router: ROUTER_VERSION });
+    changed++;
+  }
+  if (changed) { save(); render(); toast(`Updated ${changed} drive time${changed === 1 ? "" : "s"} with better routing`); }
 }
 
 /* ================== Itinerary rows (shared by list, email, text) ================== */
@@ -1045,7 +1073,7 @@ function wireDialog(it) {
     if (A.lat == null || B.lat == null) { c.className = "calc warn"; c.textContent = `Couldn't find ${A.lat == null ? A.long : B.long} on the map. Check the town/state spelling, add a street address, or just type the drive time.`; it.minutes = null; return; }
     const r = await routeTime(A, B);
     if (my !== seq) return;
-    Object.assign(it, { minutes: r.minutes, miles: r.miles, est: r.est });
+    Object.assign(it, { minutes: r.minutes, miles: r.miles, est: r.est, router: ROUTER_VERSION });
     c.className = "calc"; c.textContent = `${r.est ? "Estimated (routing service unreachable)" : "Calculated"}: ${fmtDur(r.minutes)} · ${r.miles} mi`;
     updateLeave();
   }
@@ -1212,6 +1240,7 @@ $("#apList").innerHTML = Object.entries(window.AP || {}).map(([c, a]) => `<optio
 importFromHash();
 render();
 loadCoopDir();
+refreshOldDrives();
 </script>
 </body>
 </html>
