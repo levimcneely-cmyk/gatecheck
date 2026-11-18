@@ -441,18 +441,126 @@ function resolvePlace(t, p) {
   return placesFor(t).find((x) => x.ref === p.ref) || null;
 }
 
+// Co-op HQ towns already known from Gate Check's map — instant, no network.
+const TOWN_COORDS = {
+  "RUSHFORD|MN": { lat: 43.8125, lon: -91.7514 },
+  "OWENSBORO|KY": { lat: 37.7578, lon: -87.1133 },
+  "NORTH FORT MYERS|FL": { lat: 26.7306, lon: -81.8583 },
+  "HAMMOND|WI": { lat: 44.9997, lon: -92.4261 },
+  "FRIENDSHIP|WI": { lat: 43.9717, lon: -89.8187 },
+  "DUNN|NC": { lat: 35.3114, lon: -78.6128 },
+  "CLARKESVILLE|GA": { lat: 34.6103, lon: -83.5283 },
+  "MOORE HAVEN|FL": { lat: 26.8339, lon: -81.0983 },
+  "FREDERICKSBURG|TX": { lat: 30.2639, lon: -98.8747 },
+  "MUENSTER|TX": { lat: 33.6528, lon: -97.3728 },
+  "WAKEENEY|KS": { lat: 39.0245, lon: -99.8820 },
+  "LANCASTER|OH": { lat: 39.7431, lon: -82.6069 },
+  "ROCHESTER|MN": { lat: 44.0143, lon: -92.4786 },
+  "DANVILLE|IN": { lat: 39.75139, lon: -86.49556 },
+  "DEFUNIAK SPRINGS|FL": { lat: 30.71700, lon: -86.11700 },
+  "SUMMERDALE|AL": { lat: 30.48889, lon: -87.69972 },
+  "DADE CITY|FL": { lat: 28.36472, lon: -82.19583 },
+  "ANDALUSIA|AL": { lat: 31.31000, lon: -86.49389 },
+  "MARIETTA|GA": { lat: 33.95333, lon: -84.54056 },
+  "INDIANAPOLIS|IN": { lat: 39.76840, lon: -86.15810 },
+  "MONTICELLO|IN": { lat: 40.74667, lon: -86.76528 },
+  "PARIS|IL": { lat: 39.62500, lon: -87.69167 },
+  "ROCHESTER|IN": { lat: 41.05917, lon: -86.19611 },
+  "WABASH|IN": { lat: 40.80083, lon: -85.82722 },
+  "PERU|IN": { lat: 40.75778, lon: -86.07167 },
+  "GREENFIELD|IN": { lat: 39.79472, lon: -85.75694 },
+  "ROCKVILLE|IN": { lat: 39.76639, lon: -87.22944 },
+  "LINDEN|IN": { lat: 40.18889, lon: -86.90222 },
+  "BLOOMINGTON|IN": { lat: 39.16670, lon: -86.53470 },
+  "MARTINSVILLE|IN": { lat: 39.39306, lon: -86.45417 },
+  "NORTH BALTIMORE|OH": { lat: 41.18028, lon: -83.66944 },
+  "HERNDON|VA": { lat: 38.97139, lon: -77.38861 },
+  "PAXTON|IL": { lat: 40.45417, lon: -88.11250 },
+  "SUMTERVILLE|FL": { lat: 28.74500, lon: -82.06333 },
+  "REIDSVILLE|GA": { lat: 32.08389, lon: -82.12083 },
+  "JEFFERSON|GA": { lat: 34.12667, lon: -83.59028 },
+  "AMERICUS|GA": { lat: 32.07528, lon: -84.22667 },
+  "EUGENE|OR": { lat: 44.05639, lon: -123.11750 },
+  "MANILLA|IN": { lat: 39.57250, lon: -85.62306 },
+  "FRANKLINTON|LA": { lat: 30.85333, lon: -90.13194 },
+  "GREENWELL SPRINGS|LA": { lat: 30.57450, lon: -90.98980 },
+  "BEMIDJI|MN": { lat: 47.48703, lon: -94.88269 },
+  "BENSON|MN": { lat: 45.31528, lon: -95.60583 },
+  "PETERSBURG|IL": { lat: 40.0114, lon: -89.8451 },
+  "MARIETTA|OH": { lat: 39.4154, lon: -81.4548 },
+  "NEWNAN|GA": { lat: 33.3807, lon: -84.7997 },
+  "TASLEY|VA": { lat: 37.7107, lon: -75.7316 },
+  "EUREKA|MT": { lat: 48.8802, lon: -115.053 },
+  "THE DALLES|OR": { lat: 45.60167, lon: -121.18472 },
+  "COWPENS|SC": { lat: 35.01861, lon: -81.80417 },
+  "ST. GEORGE|UT": { lat: 37.10247, lon: -113.57706 },
+};
+const STATE_NAMES = { AL:"Alabama",AK:"Alaska",AZ:"Arizona",AR:"Arkansas",CA:"California",CO:"Colorado",CT:"Connecticut",DE:"Delaware",FL:"Florida",GA:"Georgia",HI:"Hawaii",ID:"Idaho",IL:"Illinois",IN:"Indiana",IA:"Iowa",KS:"Kansas",KY:"Kentucky",LA:"Louisiana",ME:"Maine",MD:"Maryland",MA:"Massachusetts",MI:"Michigan",MN:"Minnesota",MS:"Mississippi",MO:"Missouri",MT:"Montana",NE:"Nebraska",NV:"Nevada",NH:"New Hampshire",NJ:"New Jersey",NM:"New Mexico",NY:"New York",NC:"North Carolina",ND:"North Dakota",OH:"Ohio",OK:"Oklahoma",OR:"Oregon",PA:"Pennsylvania",RI:"Rhode Island",SC:"South Carolina",SD:"South Dakota",TN:"Tennessee",TX:"Texas",UT:"Utah",VT:"Vermont",VA:"Virginia",WA:"Washington",WV:"West Virginia",WI:"Wisconsin",WY:"Wyoming",DC:"District of Columbia" };
+
+// "Marietta, OH" / "123 Main St, Marietta, OH 45750" → { city, st }
+function cityState(q) {
+  const parts = q.split(",").map((x) => x.trim()).filter(Boolean);
+  if (parts.length < 2) return null;
+  const st = (parts.at(-1).match(/^([A-Za-z]{2})\b/) || [])[1];
+  if (!st || !STATE_NAMES[st.toUpperCase()]) return null;
+  return { city: parts.at(-2).replace(/^\d+\s+/, ""), st: st.toUpperCase() };
+}
+async function getJSON(url) { const r = await fetch(url); if (!r.ok) throw new Error(r.status); return r.json(); }
+
+// Nominatim allows ~1 request/second, so its calls go through a queue.
+let nomChain = Promise.resolve();
+function nominatim(q) {
+  const run = async () => {
+    for (let attempt = 0; attempt < 2; attempt++) {
+      try {
+        const j = await getJSON(`https://nominatim.openstreetmap.org/search?format=json&limit=1&countrycodes=us,ca&q=${encodeURIComponent(q)}`);
+        return j[0] ? { lat: +j[0].lat, lon: +j[0].lon } : null;
+      } catch (e) { await new Promise((r) => setTimeout(r, 1500)); }
+    }
+    return null;
+  };
+  const p = nomChain.then(run);
+  nomChain = p.then(() => new Promise((r) => setTimeout(r, 1100)), () => {});
+  return p;
+}
+async function photon(q) {
+  try {
+    const j = await getJSON(`https://photon.komoot.io/api/?limit=1&lang=en&q=${encodeURIComponent(q)}`);
+    const f = j.features && j.features[0]; return f ? { lat: f.geometry.coordinates[1], lon: f.geometry.coordinates[0] } : null;
+  } catch (e) { return null; }
+}
+async function openMeteoTown(city, st) {
+  try {
+    const j = await getJSON(`https://geocoding-api.open-meteo.com/v1/search?count=20&language=en&format=json&countryCode=US&name=${encodeURIComponent(city)}`);
+    const hit = (j.results || []).find((r) => r.admin1 === STATE_NAMES[st]);
+    return hit ? { lat: hit.latitude, lon: hit.longitude } : null;
+  } catch (e) { return null; }
+}
 async function geocode(q) {
   q = (q || "").trim(); if (!q) return null;
   const key = `nrtclog-geo:${q.toLowerCase()}`;
   try { const c = localStorage.getItem(key); if (c) return JSON.parse(c); } catch (e) {}
-  try {
-    const r = await fetch(`https://nominatim.openstreetmap.org/search?format=json&limit=1&countrycodes=us,ca&q=${encodeURIComponent(q)}`, { headers: { Accept: "application/json" } });
-    const j = await r.json();
-    if (!j[0]) return null;
-    const out = { lat: +j[0].lat, lon: +j[0].lon };
-    try { localStorage.setItem(key, JSON.stringify(out)); } catch (e) {}
-    return out;
-  } catch (e) { return null; }
+  let out = null;
+  const code = (q.match(/^([A-Za-z]{3})(?:\s+airport)?$/i) || [])[1];
+  const ap = code && apInfo(code);
+  if (ap) out = { lat: ap.lat, lon: ap.lon };
+  const cs = cityState(q);
+  const isStreet = /^\d/.test(q);
+  if (!out && cs && !isStreet) out = TOWN_COORDS[`${cs.city.toUpperCase()}|${cs.st}`] || null;
+  if (!out && cs && !isStreet) out = await openMeteoTown(cs.city, cs.st);
+  if (!out) out = await nominatim(q);
+  if (!out) out = await photon(q);
+  // A street address nobody can find still lands on its town
+  if (!out && cs && isStreet) out = TOWN_COORDS[`${cs.city.toUpperCase()}|${cs.st}`] || (await openMeteoTown(cs.city, cs.st));
+  if (out) { out = { lat: +out.lat, lon: +out.lon }; try { localStorage.setItem(key, JSON.stringify(out)); } catch (e) {} }
+  return out;
+}
+// Remember a found location on the co-op / hotel itself so it's never looked up again.
+function keepCoords(t, P) {
+  if (!P || P.lat == null) return;
+  if (P.ref.startsWith("coop:")) { const c = t.coops[+P.ref.slice(5)]; if (c && c.lat == null) Object.assign(c, { lat: P.lat, lon: P.lon }); }
+  if (P.ref.startsWith("hotel:")) { const h = t.items.find((x) => x.id === P.ref.slice(6)); if (h && h.lat == null) Object.assign(h, { lat: P.lat, lon: P.lon }); }
+  save();
 }
 async function ensureCoords(obj, q) {
   if (obj && obj.lat != null && obj.lon != null) return obj;
@@ -527,9 +635,12 @@ function buildRows(t, opts) {
     } else if (it.type === "drive") {
       const A = resolvePlace(t, it.from), B = resolvePlace(t, it.to);
       const dur = it.minutes != null ? `${it.est ? "~" : ""}${fmtDur(it.minutes)}` : "";
-      rows.push({ ...base, date: it.date, key: toMin(it.time), time: fmtTime(it.time), who: whoTag(t, it.travelers),
+      // "Arrive by" drives the schedule: leave time = arrive-by minus drive time (rounded down to 5 min)
+      const arr = toMin(it.arriveBy);
+      const leave = arr != null && it.minutes != null ? Math.floor((arr - it.minutes) / 5) * 5 : toMin(it.time);
+      rows.push({ ...base, date: it.date, key: leave ?? (arr != null ? arr - 1 : null), time: leave != null ? fmtTime(fromMin(leave)) : "", who: whoTag(t, it.travelers),
         what: `Drive ${A ? A.short : "?"} → ${B ? B.short : "?"}`,
-        detail: join(dur && `${dur}${opts.miles && it.miles ? ` (${it.miles} mi)` : ""}`, it.time && it.minutes != null && `arrive ~${fmtTime(fromMin(toMin(it.time) + it.minutes))}`, it.note) });
+        detail: join(dur && `${dur}${opts.miles && it.miles ? ` (${it.miles} mi)` : ""}`, arr != null ? `arrive by ${fmtTime(it.arriveBy)}` : it.time && it.minutes != null && `arrive ~${fmtTime(fromMin(toMin(it.time) + it.minutes))}`, it.note) });
     } else if (it.type === "meeting") {
       const P = resolvePlace(t, it.loc);
       const where = it.loc && it.loc.ref === "custom" ? it.loc.label : P && P.ref.startsWith("hotel:") ? P.long : (P && P.address) || "";
@@ -562,8 +673,10 @@ function buildRows(t, opts) {
         if (r.key == null && it.minutes != null) {
           const next = list.filter((m) => m.type === "meeting" && m.key != null && m.item.loc && m.item.loc.ref === B && B !== "custom").sort((a, b) => a.key - b.key)[0];
           if (next) {
-            const leave = Math.floor((next.key - it.minutes - 15) / 5) * 5;
-            r.key = leave; r.time = `by ${fmtTime(fromMin(leave))}`;
+            // No arrive-by set: aim to arrive 15 min before the meeting there
+            const arrive = next.key - 15, leave = Math.floor((arrive - it.minutes) / 5) * 5;
+            r.key = leave; r.time = fmtTime(fromMin(leave));
+            r.detail = [r.detail, `arrive by ${fmtTime(fromMin(arrive))}`].filter(Boolean).join(" · ");
           }
         }
       }
@@ -858,9 +971,10 @@ function openItem(it, type) {
       if (hotelToday) it.to = { ref: `hotel:${hotelToday.id}` }; else if (ps.find((p) => p.ref.startsWith("coop:"))) it.to = { ref: "coop:0" };
     }
     b += `<div class="grid2">${placeSelect("fFromP", "From", it.from)}${placeSelect("fToP", "To", it.to)}</div>`;
-    b += `<div class="grid3">${inp("fDate", "Date", it.date, 'type="date" required')}${inp("fTime", "Leave at (optional)", it.time, 'type="time"')}${inp("fDur", "Drive time", it.manual ? fmtDur(it.minutes).replace(" hrs", "h").replace(" hr", "h").replace(" min", "m") : "", 'placeholder="auto"')}</div>`;
+    b += `<div class="grid3">${inp("fDate", "Date", it.date, 'type="date" required')}${inp("fArrive", "Arrive by", it.arriveBy, 'type="time"')}${inp("fDur", "Drive time", it.manual ? fmtDur(it.minutes).replace(" hrs", "h").replace(" hr", "h").replace(" min", "m") : "", 'placeholder="auto"')}</div>`;
     b += `<div class="calc" id="fCalc">${it.minutes != null ? `${it.manual ? "Manual" : "Calculated"}: ${fmtDur(it.minutes)}${it.miles ? ` · ${it.miles} mi` : ""}` : "Pick both ends and the drive time calculates itself."}</div>`;
-    b += `<p class="hint">Leave "Leave at" blank and the hub works out a "leave by" time when the drive ends at a meeting (15-min cushion). Type a drive time to override, e.g. 4:30.</p>`;
+    b += `<p class="hint" id="fLeave"></p>`;
+    b += `<p class="hint">Set "Arrive by" and the leave time works itself out. Driving to a meeting? It fills in 15 minutes before the start. Type a drive time to override, e.g. 4:30.</p>`;
     b += inp("fNote", "Note (optional)", it.note, 'placeholder="e.g. stop for lunch in Colby"');
     b += travelerPicker(it.travelers, "Who's in the car");
   } else if (type === "meeting") {
@@ -919,13 +1033,34 @@ function wireDialog(it) {
     const A = resolvePlace(t, readPlace("fFromP")), B = resolvePlace(t, readPlace("fToP"));
     if (!A || !B) { c.className = "calc"; c.textContent = "Pick both ends and the drive time calculates itself."; it.minutes = null; return; }
     c.className = "calc"; c.textContent = "Calculating…";
-    await ensureCoords(A, A.q); await ensureCoords(B, B.q);
+    await Promise.all([ensureCoords(A, A.q), ensureCoords(B, B.q)]);
+    [A, B].forEach((P) => keepCoords(t, P));
     if (my !== seq) return;
-    if (A.lat == null || B.lat == null) { c.className = "calc warn"; c.textContent = `Couldn't place ${A.lat == null ? A.long : B.long} on a map — add a street address or type the drive time.`; it.minutes = null; return; }
+    if (A.lat == null || B.lat == null) { c.className = "calc warn"; c.textContent = `Couldn't find ${A.lat == null ? A.long : B.long} on the map. Check the town/state spelling, add a street address, or just type the drive time.`; it.minutes = null; return; }
     const r = await routeTime(A, B);
     if (my !== seq) return;
     Object.assign(it, { minutes: r.minutes, miles: r.miles, est: r.est });
     c.className = "calc"; c.textContent = `${r.est ? "Estimated (routing service unreachable)" : "Calculated"}: ${fmtDur(r.minutes)} · ${r.miles} mi`;
+    updateLeave();
+  }
+  // Pre-fill "Arrive by" 15 min before a meeting at the destination that day
+  function suggestArrive() {
+    if (it.type !== "drive" || $("#fArrive").value) return;
+    const to = readPlace("fToP"), date = $("#fDate").value;
+    if (!to || to.ref === "custom") return;
+    const m = trip().items.filter((x) => x.type === "meeting" && x.date === date && x.start && x.loc && x.loc.ref === to.ref).sort((a, b) => a.start.localeCompare(b.start))[0];
+    if (m) $("#fArrive").value = fromMin(toMin(m.start) - 15);
+  }
+  function updateLeave() {
+    const el = $("#fLeave"); if (!el) return;
+    const arr = toMin($("#fArrive").value), manual = parseDur($("#fDur").value);
+    const mins = manual != null ? manual : it.minutes;
+    el.innerHTML = arr != null && mins != null ? `<b style="color:var(--breeze)">Leave at ${fmtTime(fromMin(Math.floor((arr - mins) / 5) * 5))}</b> to arrive by ${fmtTime($("#fArrive").value)}` : "";
+  }
+  if (it.type === "drive") {
+    ["fArrive", "fDur"].forEach((id) => $("#" + id).addEventListener("input", updateLeave));
+    ["fToP", "fDate"].forEach((id) => $("#" + id).addEventListener("change", () => { suggestArrive(); updateLeave(); }));
+    suggestArrive(); updateLeave();
   }
   EDITING.recalc = recalcDrive;
   if (it.type === "drive" && !it.manual && it.minutes == null) recalcDrive();
@@ -946,7 +1081,7 @@ $("#itemForm").addEventListener("submit", async (e) => {
     if (!(await ensureCoords(it, it.address || [it.name, it.city].filter(Boolean).join(", "))).lat && it.city) await ensureCoords(it, it.city);
   }
   if (it.type === "drive") {
-    Object.assign(it, { from: readPlace("fFromP"), to: readPlace("fToP"), time: v("fTime"), note: v("fNote"), travelers: readWho() });
+    Object.assign(it, { from: readPlace("fFromP"), to: readPlace("fToP"), arriveBy: v("fArrive"), time: "", note: v("fNote"), travelers: readWho() });
     const m = parseDur(v("fDur"));
     if (m != null) Object.assign(it, { minutes: m, manual: true, est: false });
     else { it.manual = false; if (it.minutes == null) { $("#dlgSave").disabled = true; $("#dlgSave").textContent = "Calculating…"; await EDITING.recalc(); } }
