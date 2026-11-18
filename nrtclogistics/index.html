@@ -140,6 +140,13 @@ dialog::backdrop { background: rgba(16, 24, 34, .35); }
 .seg { display: inline-flex; height: 20px; border: 1px solid var(--line-2); border-radius: 6px; overflow: hidden; margin-bottom: 4px; vertical-align: bottom; }
 .seg button { border: 0; background: #fff; padding: 0 8px; font-size: 11.5px; line-height: 18px; font-weight: 600; color: var(--muted); cursor: pointer; }
 .seg button[aria-pressed="true"] { background: var(--breeze); color: #fff; }
+.dropzone { display: flex; gap: 10px; align-items: center; margin-top: 10px; padding: 12px 14px; border: 1.5px dashed var(--line-2); border-radius: 10px; font-size: 13px; color: var(--muted); cursor: pointer; background: #FAFAFA; }
+.dropzone[hidden] { display: none; }
+.dropzone:hover, .dropzone.over { border-color: var(--aqua); background: #EEF8F8; color: var(--ink-2); }
+.dropzone.working { border-style: solid; border-color: var(--aqua); color: var(--breeze); cursor: progress; }
+.dropzone b { color: var(--ink); }
+.imp-row { display: grid; grid-template-columns: 22px 34px 1fr; gap: 8px; align-items: center; padding: 8px 4px; border-bottom: 1px solid var(--line); font-size: 14px; cursor: pointer; }
+.imp-row small { display: block; color: var(--muted); font-size: 12.5px; }
 .calc { font-size: 13px; padding: 8px 10px; border-radius: 8px; background: #EEF8F8; color: var(--teal); margin-top: 2px; }
 .calc.warn { background: #FCEBEC; color: var(--coral); }
 
@@ -247,6 +254,11 @@ html.locked #gate { display: flex; min-height: 100vh; align-items: center; justi
         <button class="btn" data-add="meal"><span class="ic ic-meal" data-ic="meal"></span>Meal</button>
         <button class="btn" data-add="note"><span class="ic ic-note" data-ic="note"></span>Note</button>
       </div>
+      <label class="dropzone" id="drop" hidden>
+        <input type="file" id="dropFile" accept="image/*,application/pdf" hidden>
+        <span class="ic ic-note" data-ic="note"></span>
+        <span id="dropText"><b>Drop a confirmation here</b> — screenshot or PDF of a flight, hotel or rental car. Or click to browse, or paste a screenshot (Ctrl+V).</span>
+      </label>
       <div id="items"></div>
     </div>
     <div style="margin-top:12px;text-align:right">
@@ -287,6 +299,12 @@ html.locked #gate { display: flex; min-height: 100vh; align-items: center; justi
       </div>
     </div>
   </form>
+</dialog>
+
+<dialog id="importDlg">
+  <div class="dlg-h"><h3>Found in your confirmation</h3><button class="btn ghost" onclick="this.closest('dialog').close()">✕</button></div>
+  <div class="dlg-b"><p class="hint" style="margin:0 0 10px">Uncheck anything you don't want. Everything stays editable after it's added.</p><div id="importList"></div></div>
+  <div class="dlg-f"><span></span><div style="display:flex;gap:8px"><button class="btn" onclick="this.closest('dialog').close()">Cancel</button><button class="btn primary" id="importAdd">Add to trip</button></div></div>
 </dialog>
 
 <dialog id="teamDlg">
@@ -1024,8 +1042,9 @@ function placeSelect(id, label, cur) {
 }
 function lastDate() { const r = buildRows(trip()); return r.length ? r.at(-1).date : new Date().toISOString().slice(0, 10); }
 
-function openItem(it, type) {
-  const isNew = !it; const t = trip();
+function openItem(it, type, asNew) {
+  const isNew = !it || !!asNew; const t = trip();
+  const fresh = !it; // brand-new blank item (not one pre-filled from a confirmation)
   it = it ? clone(it) : { id: uid(), type, date: lastDate(), travelers: [] };
   EDITING = { it, isNew };
   type = it.type;
@@ -1033,8 +1052,8 @@ function openItem(it, type) {
   $("#dlgDelete").style.visibility = isNew ? "hidden" : "visible";
   let b = "";
   if (type === "flight") {
-    if (isNew && t.travelers.length === 1) it.from = homeOf(t.travelers[0]);
-    b += travelerPicker(isNew && t.travelers.length > 1 ? "none" : it.travelers, "Who's on this flight");
+    if (fresh && t.travelers.length === 1) it.from = homeOf(t.travelers[0]);
+    b += travelerPicker(fresh && t.travelers.length > 1 ? "none" : it.travelers, "Who's on this flight");
     b += `<div class="grid2">${inp("fAirline", "Airline", it.airline, 'placeholder="e.g. Southwest"')}${inp("fNumber", "Flight #", it.number, 'placeholder="e.g. 1234"')}</div>`;
     b += `<div class="grid2">${inp("fFrom", "From", it.from, 'list="apList" maxlength="3" style="text-transform:uppercase" placeholder="IND"')}${inp("fTo", "To", it.to, 'list="apList" maxlength="3" style="text-transform:uppercase" placeholder="DEN"')}</div>`;
     b += `<div class="grid3">${inp("fDate", "Date", it.date, 'type="date" required')}${inp("fDep", "Departs", it.dep, 'type="time"')}${inp("fArr", "Lands", it.arr, 'type="time"')}</div>`;
@@ -1044,21 +1063,21 @@ function openItem(it, type) {
     b += `<p class="hint" id="fDirHint"></p>`;
   } else if (type === "rental") {
     const lastLand = buildRows(t).filter((r) => r.type === "flight" && r.what.startsWith("Land")).at(-1);
-    if (isNew) { it.driver = t.travelers.find((n) => n === "Levi McNeely") || t.travelers[0] || ""; it.pickup = lastLand ? lastLand.what.slice(5) : ""; if (lastLand) it.date = lastLand.date; }
+    if (fresh) { it.driver = t.travelers.find((n) => n === "Levi McNeely") || t.travelers[0] || ""; it.pickup = lastLand ? lastLand.what.slice(5) : ""; if (lastLand) it.date = lastLand.date; }
     b += `<div class="grid2"><div class="field"><label class="f" for="fDriver">Who has the car</label><select class="f-input" id="fDriver">${(t.travelers.length ? t.travelers : [it.driver || ""]).map((n) => `<option ${n === it.driver ? "selected" : ""}>${esc(n)}</option>`).join("")}</select></div>
       ${inp("fCompany", "Company", it.company, 'placeholder="National, Enterprise…"')}</div>`;
     b += `<div class="grid3">${inp("fPickup", "Pick up at", it.pickup, 'list="apList" maxlength="3" style="text-transform:uppercase"')}${inp("fDate", "Pick-up date", it.date, 'type="date" required')}${inp("fTime", "Time (optional)", it.time, 'type="time"')}</div>`;
     b += `<div class="grid3">${inp("fRetDate", "Return date (optional)", it.retDate, 'type="date"')}${inp("fRetTime", "Return time", it.retTime, 'type="time"')}${inp("fConf", "Confirmation #", it.conf)}</div>`;
     b += `<p class="hint">With no time, it slots in right after the driver lands.</p>`;
   } else if (type === "hotel") {
-    if (isNew) it.outDate = addDays(it.date, 1);
+    if (fresh) it.outDate = addDays(it.date, 1);
     b += inp("fName", "Hotel", it.name, 'placeholder="Hilton Garden Inn Hays" required');
     b += `<div class="grid2">${inp("fCity", "City, ST", it.city, 'placeholder="Hays, KS"')}${inp("fConf", "Confirmation #", it.conf)}</div>`;
     b += inp("fAddress", "Street address (optional)", it.address, 'placeholder="Used in the email and for drive times"');
     b += `<div class="grid2">${inp("fDate", "Check in", it.date, 'type="date" required')}${inp("fOut", "Check out", it.outDate, 'type="date"')}</div>`;
     b += travelerPicker(it.travelers, "Who's staying");
   } else if (type === "drive") {
-    if (isNew) {
+    if (fresh) {
       // Guess: from the last place we were, to the next place we need to be
       const ps = placesFor(t), rows = buildRows(t);
       const lastLand = rows.filter((r) => r.date === it.date && r.type === "flight" && r.what.startsWith("Land")).at(-1);
@@ -1076,7 +1095,7 @@ function openItem(it, type) {
     b += inp("fNote", "Note (optional)", it.note, 'placeholder="e.g. stop for lunch in Colby"');
     b += travelerPicker(it.travelers, "Who's in the car");
   } else if (type === "meeting") {
-    if (isNew) { const c = t.coops.find((x) => x.name); if (c) { it.coop = c.name; it.loc = { ref: "coop:0" }; } }
+    if (fresh) { const c = t.coops.find((x) => x.name); if (c) { it.coop = c.name; it.loc = { ref: "coop:0" }; } }
     b += inp("fTitle", "Meeting", it.title, 'placeholder="WCE Executive Readout" required');
     b += `<div class="grid3">${inp("fDate", "Date", it.date, 'type="date" required')}${inp("fStart", "Start", it.start, 'type="time"')}${inp("fEnd", "End", it.end, 'type="time"')}</div>`;
     b += inp("fCoop", "Co-op we're meeting with", it.coop, 'list="coopList"');
@@ -1085,7 +1104,7 @@ function openItem(it, type) {
     b += inp("fNote", "Note (optional)", it.note);
     b += travelerPicker(it.travelers, "Who's attending");
   } else if (type === "meal") {
-    if (isNew) it.kind = "Lunch";
+    if (fresh) it.kind = "Lunch";
     b += `<div class="field"><label class="f">Meal</label><div class="chips" id="fKind">${["Breakfast", "Lunch", "Dinner", "Coffee", "Other"].map((k) => `<span class="chip" role="button" tabindex="0" data-k="${k}" aria-pressed="${(it.kind || "Other") === k || (k === "Other" && !["Breakfast", "Lunch", "Dinner", "Coffee"].includes(it.kind))}">${k}</span>`).join("")}</div>
       <input class="f-input" id="fKindX" style="margin-top:6px;${["Breakfast", "Lunch", "Dinner", "Coffee"].includes(it.kind) ? "display:none" : ""}" value="${esc(["Breakfast", "Lunch", "Dinner", "Coffee"].includes(it.kind) ? "" : it.kind || "")}" placeholder="e.g. Team happy hour"></div>`;
     b += `<div class="grid2">${inp("fPlace", "Where", it.place, 'placeholder="Restaurant name (or TBD)"')}${inp("fRes", "Reservation (optional)", it.res, 'placeholder="7:00 PM under McNeely, party of 4"')}</div>`;
@@ -1131,7 +1150,7 @@ function wireDialog(it) {
   function onFlightChange() {
     if (it.type !== "flight") return;
     const tmp = { travelers: readWho().length ? readWho() : trip().travelers, from: $("#fFrom").value, to: $("#fTo").value, dir: $("#fDir").value, arr: $("#fArr").value };
-    if (EDITING.isNew && !EDITING.fromTouched && readWho().length === 1 && homeOf(readWho()[0])) $("#fFrom").value = homeOf(readWho()[0]);
+    if (EDITING.isNew && !EDITING.fromTouched && (!$("#fFrom").value || EDITING.autoFrom === $("#fFrom").value) && readWho().length === 1 && homeOf(readWho()[0])) $("#fFrom").value = EDITING.autoFrom = homeOf(readWho()[0]);
     const d = flightDir(tmp), to = (tmp.to || "").toUpperCase(), from = (tmp.from || "").toUpperCase();
     $("#fDirHint").textContent = !from && !to ? "" : d === "in" ? `Shows as “Land ${to || "…"}” at the landing time.` : d === "out" ? `Shows as “Leave ${from || "…"}” at the departure time.` : `Shows as “Fly ${from} → ${to}”.`;
   }
@@ -1231,6 +1250,112 @@ $("#dlgDelete").onclick = () => {
   t.items = t.items.filter((x) => x.id !== id); $("#itemDlg").close(); commit(); toast("Deleted");
 };
 $$("[data-add]").forEach((b) => (b.onclick = () => openItem(null, b.dataset.add)));
+
+/* ================== Read confirmations (Gemini via the Apps Script) ================== */
+function fileToPayload(file) {
+  return new Promise((resolve, reject) => {
+    if (file.type === "application/pdf") {
+      if (file.size > 15e6) return reject(new Error("That PDF is over 15 MB."));
+      const r = new FileReader(); r.onload = () => resolve({ mime: "application/pdf", data: String(r.result).split(",")[1] }); r.onerror = reject; r.readAsDataURL(file); return;
+    }
+    if (!/^image\//.test(file.type)) return reject(new Error("Use a screenshot/photo or a PDF."));
+    // Shrink big screenshots so the upload is quick; text stays sharp at 2000px
+    const img = new Image(), url = URL.createObjectURL(file);
+    img.onload = () => {
+      const k = Math.min(1, 2000 / Math.max(img.width, img.height));
+      const c = document.createElement("canvas"); c.width = Math.round(img.width * k); c.height = Math.round(img.height * k);
+      const g = c.getContext("2d"); g.fillStyle = "#fff"; g.fillRect(0, 0, c.width, c.height); g.drawImage(img, 0, 0, c.width, c.height);
+      URL.revokeObjectURL(url); resolve({ mime: "image/jpeg", data: c.toDataURL("image/jpeg", 0.88).split(",")[1] });
+    };
+    img.onerror = () => reject(new Error("Couldn't open that image."));
+    img.src = url;
+  });
+}
+// "MCNEELY/LEVI MR", "Levi McNeely", "MCNEELY LEVI" → team member, by last name (first name breaks ties)
+function matchPerson(raw) {
+  const toks = String(raw || "").toUpperCase().replace(/[^A-Z\s/]/g, " ").split(/[\s/]+/).filter(Boolean);
+  if (!toks.length) return "";
+  const hits = TEAM.filter((p) => toks.includes(p.name.toUpperCase().split(/\s+/).at(-1)));
+  if (hits.length <= 1) return hits[0]?.name || "";
+  return (hits.find((p) => toks.includes(p.name.toUpperCase().split(/\s+/)[0])) || hits[0]).name;
+}
+function peopleFor(list) {
+  const t = trip();
+  const names = [...new Set((list || []).map(matchPerson).filter(Boolean))];
+  const out = names.length ? names : (list && list.filter(Boolean).length ? [myName()].filter(Boolean) : []);
+  out.forEach((n) => { if (!t.travelers.includes(n)) t.travelers.push(n); }); // put them on the trip
+  return out.length === t.travelers.length ? [] : out;
+}
+const hhmm = (x) => (/^\d{1,2}:\d{2}$/.test(x || "") ? x.padStart(5, "0") : "");
+const ymd = (x) => (/^\d{4}-\d{2}-\d{2}$/.test(x || "") ? x : "");
+function itemsFromExtract(d) {
+  const out = [];
+  (d.flights || []).forEach((f) => {
+    if (!f.from && !f.to) return;
+    out.push({ id: uid(), type: "flight", date: ymd(f.date) || lastDate(), airline: f.airline || "", number: String(f.flightNumber || "").replace(/^[A-Z]{2}\s*/i, ""),
+      from: (f.from || "").toUpperCase().slice(0, 3), to: (f.to || "").toUpperCase().slice(0, 3), dep: hhmm(f.depTime), arr: hhmm(f.arrTime),
+      arrDate: ymd(f.arrDate) && f.arrDate !== f.date ? f.arrDate : "", dir: "auto", conf: f.confirmation || "", travelers: peopleFor(f.passengers) });
+  });
+  // A leg that another imported leg continues from (same day) is a connection: "Fly IND → MDW"
+  const fl = out.filter((x) => x.type === "flight");
+  fl.forEach((x) => { if (fl.some((y) => y !== x && y.from === x.to && y.date === (x.arrDate || x.date))) x.dir = "conn"; });
+  (d.hotels || []).forEach((h) => {
+    if (!h.name) return;
+    const city = h.city || (cityState(h.address || "") ? `${cityState(h.address).city}, ${cityState(h.address).st}` : "");
+    out.push({ id: uid(), type: "hotel", name: h.name, address: h.address || "", city, date: ymd(h.checkIn) || lastDate(), outDate: ymd(h.checkOut), conf: h.confirmation || "", travelers: peopleFor(h.guests) });
+  });
+  (d.rentals || []).forEach((r) => {
+    const drv = peopleFor([r.driver]);
+    out.push({ id: uid(), type: "rental", company: r.company || "", pickup: (r.pickupAirport || "").toUpperCase().slice(0, 3), date: ymd(r.pickupDate) || lastDate(), time: hhmm(r.pickupTime),
+      retDate: ymd(r.returnDate), retTime: hhmm(r.returnTime), conf: r.confirmation || "", driver: drv[0] || myName() || trip().travelers[0] || "" });
+  });
+  return out;
+}
+function describeItem(it) {
+  if (it.type === "flight") return [`${it.airline} ${it.number}`.trim() || "Flight", `${it.from} → ${it.to} · ${fmtShort(it.date)}${it.dep ? ` · departs ${fmtTime(it.dep)}` : ""}${it.arr ? ` · lands ${fmtTime(it.arr)}` : ""}`];
+  if (it.type === "hotel") return [it.name, `${fmtShort(it.date)}${it.outDate ? ` – ${fmtShort(it.outDate)}` : ""}${it.city ? ` · ${it.city}` : ""}`];
+  return [`${it.company || "Rental car"}${it.pickup ? ` at ${it.pickup}` : ""}`, `${fmtShort(it.date)}${it.time ? ` ${fmtTime(it.time)}` : ""}${it.retDate ? ` – ${fmtShort(it.retDate)}` : ""}`];
+}
+let IMPORTED = [];
+async function readConfirmation(file) {
+  if (!file) return;
+  const dz = $("#drop"), txt = $("#dropText"), before = txt.innerHTML;
+  dz.classList.add("working"); txt.textContent = `Reading ${file.name || "screenshot"}…`;
+  try {
+    const payload = await fileToPayload(file);
+    const today = new Date(); const iso = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
+    const j = await api("extract", Object.assign(payload, { today: iso }));
+    IMPORTED = itemsFromExtract(j.data || {});
+    if (!IMPORTED.length) { toast("Couldn't find a flight, hotel or rental car in that file"); return; }
+    save(); renderRoster();
+    if (IMPORTED.length === 1) { openItem(IMPORTED[0], IMPORTED[0].type, true); toast("Check the details, then Save"); return; }
+    $("#importList").innerHTML = IMPORTED.map((it, i) => { const [a, b] = describeItem(it); return `<label class="imp-row"><input type="checkbox" data-i="${i}" checked>${icon(it.type)}<span>${esc(a)}<small>${esc(b)}</small></span></label>`; }).join("");
+    $("#importDlg").showModal();
+  } catch (e) {
+    const msg = { "no ai key": "Confirmation reading isn't switched on yet — the Gemini key needs to go in the Apps Script.", "ai busy": "Gemini is busy — try again in a minute." }[e.code] || (e.code === "passcode" ? "" : `Couldn't read that file${e.message ? ` (${e.message})` : ""}.`);
+    if (e.code === "passcode") handleSyncError(e); else toast(msg);
+  } finally { dz.classList.remove("working"); txt.innerHTML = before; $("#dropFile").value = ""; }
+}
+$("#importAdd").onclick = () => {
+  const t = trip(), picks = $$("#importList input:checked").map((x) => IMPORTED[+x.dataset.i]);
+  picks.forEach((it) => t.items.push(it));
+  $("#importDlg").close(); commit(); toast(`Added ${picks.length} item${picks.length === 1 ? "" : "s"}`);
+};
+(function () {
+  const dz = $("#drop");
+  if (!window.SYNC_URL) return; // needs the Apps Script backend
+  dz.hidden = false;
+  $("#dropFile").onchange = (e) => readConfirmation(e.target.files[0]);
+  ["dragenter", "dragover"].forEach((ev) => dz.addEventListener(ev, (e) => { e.preventDefault(); dz.classList.add("over"); }));
+  ["dragleave", "drop"].forEach((ev) => dz.addEventListener(ev, () => dz.classList.remove("over")));
+  dz.addEventListener("drop", (e) => { e.preventDefault(); readConfirmation(e.dataTransfer.files[0]); });
+  document.addEventListener("paste", (e) => {
+    if (document.documentElement.classList.contains("locked") || document.querySelector("dialog[open]")) return;
+    if (e.target.matches && e.target.matches("input, textarea")) return;
+    const f = [...(e.clipboardData?.files || [])].find((x) => /^image\/|pdf/.test(x.type));
+    if (f) { e.preventDefault(); readConfirmation(f); }
+  });
+})();
 
 /* ================== Team dialog ================== */
 function renderTeam() {

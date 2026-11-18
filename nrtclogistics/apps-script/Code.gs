@@ -9,9 +9,14 @@
  *   3. Clear NEW_PASSCODE back to "" and save (so it isn't sitting in the code).
  *   4. Deploy → New deployment → Web app · Execute as: Me · Who has access: Anyone → copy the URL.
  * Changing the passcode later: type it into NEW_PASSCODE, run setPasscode(), clear it again.
+ * Reading confirmations (screenshots/PDFs) with Gemini: paste a key from aistudio.google.com/apikey
+ *   into GEMINI_KEY, run setAiKey() (approve the new "connect to an external service" permission),
+ *   clear GEMINI_KEY again, then redeploy as a New version. Optional Script Property GEMINI_MODEL
+ *   overrides the model (default: Google's current Flash model).
  * Updating this code later: Deploy → Manage deployments → edit → Version: New version (keeps the URL).
  */
 const NEW_PASSCODE = "";
+const GEMINI_KEY = "";
 
 const SHEET = "Store";
 const HEAD = ["Key", "Rev", "Updated", "Updated By", "Value"];
@@ -37,6 +42,59 @@ function setPasscode() {
   Logger.log("Passcode set. Now clear NEW_PASSCODE back to \"\" and save.");
 }
 
+function setAiKey() {
+  if (!GEMINI_KEY) throw new Error("Paste your Gemini API key into GEMINI_KEY first, then run this again.");
+  PropertiesService.getScriptProperties().setProperty("GEMINI_KEY", GEMINI_KEY.trim());
+  // Quick test call so the permission prompt happens now and a bad key shows up right away
+  const r = UrlFetchApp.fetch("https://generativelanguage.googleapis.com/v1beta/models?pageSize=1", { headers: { "x-goog-api-key": GEMINI_KEY.trim() }, muteHttpExceptions: true });
+  if (r.getResponseCode() !== 200) throw new Error("Gemini rejected that key: " + r.getContentText().slice(0, 200));
+  Logger.log("Gemini key saved and working. Now clear GEMINI_KEY back to \"\", save, and redeploy as a New version.");
+}
+
+const EXTRACT_PROMPT = [
+  "You read travel confirmations (airline emails, app screenshots, itineraries, hotel and rental-car confirmations).",
+  "Pull out every flight segment, hotel stay and rental car. Return ONLY JSON shaped exactly like:",
+  '{"flights":[{"airline":"","flightNumber":"","from":"","to":"","date":"YYYY-MM-DD","depTime":"HH:MM","arrDate":"YYYY-MM-DD","arrTime":"HH:MM","confirmation":"","passengers":[""]}],',
+  '"hotels":[{"name":"","address":"","city":"City, ST","checkIn":"YYYY-MM-DD","checkOut":"YYYY-MM-DD","confirmation":"","guests":[""]}],',
+  '"rentals":[{"company":"","pickupAirport":"","pickupDate":"YYYY-MM-DD","pickupTime":"HH:MM","returnDate":"YYYY-MM-DD","returnTime":"HH:MM","confirmation":"","driver":""}]}',
+  "Rules: airports as 3-letter IATA codes. Times are local 24-hour HH:MM. Each connecting leg is its own flight.",
+  "flightNumber is just the number (e.g. 1234); airline is the marketing airline name (e.g. Southwest).",
+  "If a year is missing, use the next occurrence on or after TODAY. Use \"\" for anything not shown. Never invent values."
+].join("\n");
+
+function extract_(req) {
+  const props = PropertiesService.getScriptProperties();
+  const key = props.getProperty("GEMINI_KEY");
+  if (!key) return { ok: false, error: "no ai key" };
+  if (!req.data || !req.mime) return { ok: false, error: "no file" };
+  const body = {
+    contents: [{ parts: [
+      { text: EXTRACT_PROMPT.replace("TODAY", "today (" + (req.today || Utilities.formatDate(new Date(), "America/New_York", "yyyy-MM-dd")) + ")") },
+      { inline_data: { mime_type: req.mime, data: req.data } }
+    ] }],
+    generationConfig: { responseMimeType: "application/json", temperature: 0 }
+  };
+  const models = [props.getProperty("GEMINI_MODEL"), "gemini-flash-latest", "gemini-2.5-flash"].filter(Boolean);
+  let last = "";
+  for (let i = 0; i < models.length; i++) {
+    const r = UrlFetchApp.fetch("https://generativelanguage.googleapis.com/v1beta/models/" + models[i] + ":generateContent", {
+      method: "post", contentType: "application/json", headers: { "x-goog-api-key": key },
+      payload: JSON.stringify(body), muteHttpExceptions: true
+    });
+    const code = r.getResponseCode();
+    if (code === 404) { last = models[i] + " not found"; continue; }
+    if (code === 429) return { ok: false, error: "ai busy" };
+    if (code !== 200) return { ok: false, error: "ai error " + code + ": " + r.getContentText().slice(0, 200) };
+    const j = JSON.parse(r.getContentText());
+    const text = (((j.candidates || [])[0] || {}).content || { parts: [] }).parts.map(function (p) { return p.text || ""; }).join("");
+    try {
+      const data = JSON.parse(text.replace(/^```(?:json)?\s*|\s*```$/g, ""));
+      return { ok: true, model: models[i], data: data };
+    } catch (err) { return { ok: false, error: "ai returned something unreadable" }; }
+  }
+  return { ok: false, error: last || "no model" };
+}
+
 function hash_(s) {
   return Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, s, Utilities.Charset.UTF_8)
     .map(function (b) { return ((b + 256) % 256).toString(16).padStart(2, "0"); }).join("");
@@ -55,9 +113,10 @@ function doPost(e) {
   if (hash_(String(req.pass || "").trim().toUpperCase()) !== want) { Utilities.sleep(800); return json_({ ok: false, error: "passcode" }); }
 
   const sh = SpreadsheetApp.getActive().getSheetByName(SHEET);
-  if (!sh) return json_({ ok: false, error: "run setup() first" });
+  if (!sh && req.action !== "extract") return json_({ ok: false, error: "run setup() first" });
 
-  if (req.action === "ping") return json_({ ok: true });
+  if (req.action === "ping") return json_({ ok: true, ai: !!props.getProperty("GEMINI_KEY") });
+  if (req.action === "extract") return json_(extract_(req));
 
   if (req.action === "list") {
     const since = Number(req.since) || 0;
