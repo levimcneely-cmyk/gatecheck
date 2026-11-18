@@ -158,9 +158,36 @@ dialog::backdrop { background: rgba(16, 24, 34, .35); }
   .preview-card h2 { display: none; }
   * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
 }
+/* Passcode gate */
+html.locked body > :not(#gate) { display: none !important; }
+#gate { display: none; }
+html.locked #gate { display: flex; min-height: 100vh; align-items: center; justify-content: center; padding: 20px; }
+.gate-card { width: min(360px, 100%); background: #fff; border: 1px solid var(--line); border-top: 4px solid var(--nrtc-red); border-radius: 12px; padding: 26px 24px; text-align: center; }
+.gate-card h1 { font-size: 20px; margin: 12px 0 4px; }
+.gate-card p { color: var(--muted); font-size: 13.5px; margin: 0 0 16px; }
+.gate-card input { text-align: center; letter-spacing: .15em; font-size: 16px; }
+.gate-card .gate-err { color: var(--strawberry); font-size: 13px; min-height: 18px; margin: 8px 0 0; }
 </style>
+<script>
+  // Hide everything until the passcode check runs (no flash of the itinerary)
+  (function () {
+    var PASS_HASH = "e3bafff2e5fea0daa2706b58b5cb99386d422f056255529a74514244a1675171";
+    try { if (localStorage.getItem("nrtclog:unlock") === PASS_HASH) return; } catch (e) {}
+    document.documentElement.classList.add("locked");
+  })();
+</script>
 </head>
 <body>
+<div id="gate">
+  <form class="gate-card" id="gateForm" autocomplete="off">
+    <span class="brand-mark" style="display:inline-block">NRTC</span>
+    <h1>Logistics Hub</h1>
+    <p>Enter the team passcode.</p>
+    <input class="f-input" id="gatePass" type="password" autocomplete="current-password" aria-label="Passcode" autofocus>
+    <button class="btn primary" style="width:100%;justify-content:center;margin-top:10px">Unlock</button>
+    <p class="gate-err" id="gateErr"></p>
+  </form>
+</div>
 
 <header class="topbar">
   <div class="in">
@@ -174,6 +201,7 @@ dialog::backdrop { background: rgba(16, 24, 34, .35); }
     <button class="btn" id="dupTrip" title="Copy this trip as a starting point">Duplicate</button>
     <button class="btn" id="teamBtn">Team</button>
     <button class="btn" id="moreBtn">Backup ▾</button>
+    <button class="btn ghost" id="lockBtn" title="Lock this page on this device">🔒</button>
   </div>
 </header>
 
@@ -1267,6 +1295,29 @@ async function loadCoopDir() {
 /* ================== Boot ================== */
 $$("[data-ic]").forEach((el) => (el.outerHTML = icon(el.dataset.ic)));
 $("#apList").innerHTML = Object.entries(window.AP || {}).map(([c, a]) => `<option value="${c}">${esc(a[0])}, ${esc(a[1])}</option>`).join("");
+/* ================== Passcode gate ================== */
+// Passcode is checked by its SHA-256 hash (not stored in plain text). To change it, swap PASS_HASH in <head>.
+(function () {
+  const HASH = "e3bafff2e5fea0daa2706b58b5cb99386d422f056255529a74514244a1675171";
+  const FAILS = "nrtclog:fails";
+  const sha = async (txt) => [...new Uint8Array(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(txt)))].map((b) => b.toString(16).padStart(2, "0")).join("");
+  $("#gateForm").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const f = JSON.parse(localStorage.getItem(FAILS) || '{"n":0,"until":0}');
+    if (Date.now() < f.until) { $("#gateErr").textContent = `Too many tries — wait ${Math.ceil((f.until - Date.now()) / 60000)} min.`; return; }
+    const ok = (await sha($("#gatePass").value.trim().toUpperCase())) === HASH;
+    if (ok) {
+      localStorage.setItem("nrtclog:unlock", HASH); localStorage.removeItem(FAILS);
+      document.documentElement.classList.remove("locked"); $("#gatePass").value = ""; $("#gateErr").textContent = ""; render();
+    } else {
+      f.n++; if (f.n >= 10) { f.until = Date.now() + 15 * 60000; f.n = 0; }
+      localStorage.setItem(FAILS, JSON.stringify(f));
+      $("#gateErr").textContent = "That's not it."; $("#gatePass").select();
+    }
+  });
+  $("#lockBtn").onclick = () => { localStorage.removeItem("nrtclog:unlock"); document.documentElement.classList.add("locked"); setTimeout(() => $("#gatePass").focus(), 50); };
+})();
+
 importFromHash();
 render();
 loadCoopDir();
