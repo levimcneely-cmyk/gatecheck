@@ -19,6 +19,12 @@ function flightDir(it) {
 }
 // Where an item happens, as a drive destination ref
 function destRef(x) { return x.type === "meeting" ? x.loc && x.loc.ref : x.type === "meal" ? `meal:${x.id}` : null; }
+// "DEN → Hays, KS"; when both ends are in the same town, use their names instead
+function driveEnds(A, B) {
+  const nm = (P) => (P ? P.long.replace(/\s*\([^)]*\)$/, "") : "?");
+  if (A && B && A.short === B.short) return `${nm(A)} → ${nm(B)}`;
+  return `${A ? A.short : "?"} → ${B ? B.short : "?"}`;
+}
 function flightLabel(it) { return [it.airline, it.number].filter(Boolean).join(" "); }
 
 function buildRows(t, opts) {
@@ -60,7 +66,7 @@ function buildRows(t, opts) {
       const dt = driveTimes(it);
       const leave = toMin(dt.leave);
       rows.push({ ...base, date: it.date, key: leave ?? (dt.arrive ? toMin(dt.arrive) - 1 : null), time: dt.leave ? `${fmtTime(dt.leave)}${dt.cross ? ` ${dt.aAbbr}` : ""}` : "", who: whoTag(t, it.travelers),
-        what: `Drive ${A ? A.short : "?"} → ${B ? B.short : "?"}`,
+        what: `Drive ${driveEnds(A, B)}`,
         detail: join(dur && `${dur}${opts.miles && it.miles ? ` (${it.miles} mi)` : ""}`, dt.arrive && `${dt.byArrive ? "arrive by" : "arrive ~"}${dt.byArrive ? " " : ""}${fmtTime(dt.arrive)}${dt.cross ? ` ${dt.bAbbr}` : ""}`, it.note) });
     } else if (it.type === "meeting") {
       const P = resolvePlace(t, it.loc);
