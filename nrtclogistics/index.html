@@ -780,30 +780,39 @@ function subjectLine(t) {
   return `Travel: ${bits.join(" ") || "Trip"}${r ? ` — ${r}` : ""}`;
 }
 function emailHTML(t, opts) {
-  const F = "font-family:'Century Gothic',Calibri,Arial,Helvetica,sans-serif;font-size:10.5pt;";
+  // Built for Outlook's Word engine: every run of text is its own <span> with an explicit weight,
+  // and bold only ever comes from <b> around that exact text — so nothing bleeds into the rest.
+  const FONT = "font-family:'Century Gothic',Calibri,Arial,Helvetica,sans-serif;";
+  const sp = (txt, { size = "10.5pt", color = "#1a1a1a", bold = false } = {}) => {
+    const run = `<span style="${FONT}font-size:${size};color:${color};font-weight:normal;">${txt}</span>`;
+    return bold ? `<b style="font-weight:bold;">${run.replace("font-weight:normal", "font-weight:bold")}</b>` : run;
+  };
+  const P = (inner, extra = "") => `<p style="margin:0 0 2px;${extra}">${inner}</p>`;
   const days = groupDays(buildRows(t, opts));
   const anyWho = days.some((d) => d.rows.some((r) => r.who));
   const whoW = Math.max(60, ...days.flatMap((d) => d.rows.map((r) => (r.who || "").length * 8 + 12)));
-  let h = `<div style="${F}color:#1a1a1a;">`;
   const coops = t.coops.filter((c) => c.name);
-  if (t.title) h += `<p style="${F}margin:0 0 2px;font-size:14pt;font-weight:bold;color:#191919;border-left:4px solid #E31F26;padding-left:8px;">${esc(t.title.replace(/\s*\(example\)$/i, ""))}</p>`;
+  let h = `<div>`;
+  if (t.title) h += P(sp(esc(t.title.replace(/\s*\(example\)$/i, "")), { size: "14pt", color: "#191919", bold: true }), "border-left:4px solid #E31F26;padding-left:8px;");
   const meta = [];
   const range = tripRange(t); if (range) meta.push(esc(range));
   if (coops.length) meta.push(coops.map((c) => `${esc(c.name)}${c.town ? ` (${esc([c.town, c.state].filter(Boolean).join(", "))})` : ""}`).join("; "));
   const rbms = [...new Set(coops.map(coopRBM).filter(Boolean))];
-  if (meta.length) h += `<p style="${F}margin:0 0 2px;color:#444;">${meta.join(" &nbsp;|&nbsp; ")}</p>`;
-  if (rbms.length) h += `<p style="${F}margin:0 0 2px;color:#444;"><b>RBM:</b> ${rbms.map(esc).join(", ")}</p>`;
-  if (t.travelers.length) h += `<p style="${F}margin:0 0 2px;color:#444;"><b>Travelers:</b> ${t.travelers.map(esc).join(", ")}</p>`;
-  if (t.notes) h += `<p style="${F}margin:8px 0 0;">${esc(t.notes).replace(/\n/g, "<br>")}</p>`;
-  if (!days.length) h += `<p style="${F}color:#888;margin:14px 0 0;">Nothing on the itinerary yet.</p>`;
+  const gray = { color: "#444444" };
+  if (meta.length) h += P(sp(meta.join(" &nbsp;|&nbsp; "), gray));
+  if (rbms.length) h += P(sp("RBM:", { ...gray, bold: true }) + sp(" " + rbms.map(esc).join(", "), gray));
+  if (t.travelers.length) h += P(sp("Travelers:", { ...gray, bold: true }) + sp(" " + t.travelers.map(esc).join(", "), gray));
+  if (t.notes) h += P(sp(esc(t.notes).replace(/\n/g, "<br>")), "margin-top:8px;");
+  if (!days.length) h += P(sp("Nothing on the itinerary yet.", { color: "#888888" }), "margin-top:14px;");
+  const td = (inner, style) => `<td style="padding:3px 12px 3px 0;vertical-align:top;${style || ""}">${inner || "&nbsp;"}</td>`;
   days.forEach((d) => {
-    h += `<p style="${F}margin:16px 0 4px;padding:0 0 3px;font-weight:bold;color:#006666;border-bottom:2px solid #4BB9B5;">${esc(fmtDay(d.date))}</p>`;
-    h += `<table cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse;${F}">`;
+    h += P(sp(esc(fmtDay(d.date)), { color: "#006666", bold: true }), "margin:16px 0 4px;padding:0 0 3px;border-bottom:2px solid #4BB9B5;");
+    h += `<table cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse;">`;
     d.rows.forEach((r) => {
       h += `<tr>`;
-      h += `<td width="118" style="${F}width:118px;padding:3px 12px 3px 0;vertical-align:top;white-space:nowrap;color:#333333;">${esc(r.time)}</td>`;
-      if (anyWho) h += `<td width="${whoW}" style="${F}width:${whoW}px;padding:3px 12px 3px 0;vertical-align:top;white-space:nowrap;font-weight:bold;color:#B21424;">${r.who ? esc(r.who) : ""}</td>`;
-      h += `<td style="${F}padding:3px 0;vertical-align:top;">${esc(r.what)}${r.detail ? `<span style="color:#666666;"> &mdash; ${esc(r.detail)}</span>` : ""}</td>`;
+      h += td(r.time ? sp(esc(r.time), { color: "#333333" }) : "", `width:118px;white-space:nowrap;`).replace("<td ", '<td width="118" ');
+      if (anyWho) h += td(r.who ? sp(esc(r.who), { color: "#B21424", bold: true }) : "", `width:${whoW}px;white-space:nowrap;`).replace("<td ", `<td width="${whoW}" `);
+      h += td(sp(esc(r.what)) + (r.detail ? sp(" &mdash; " + esc(r.detail), { color: "#666666" }) : ""), "padding-right:0;");
       h += `</tr>`;
     });
     h += `</table>`;
@@ -958,7 +967,8 @@ $("#items").addEventListener("click", (e) => {
 async function copyRich(html, text) {
   try {
     if (navigator.clipboard && window.ClipboardItem) {
-      await navigator.clipboard.write([new ClipboardItem({ "text/html": new Blob([html], { type: "text/html" }), "text/plain": new Blob([text], { type: "text/plain" }) })]);
+      const doc = `<html><head><meta charset="utf-8"></head><body><!--StartFragment-->${html}<!--EndFragment--></body></html>`;
+      await navigator.clipboard.write([new ClipboardItem({ "text/html": new Blob([doc], { type: "text/html" }), "text/plain": new Blob([text], { type: "text/plain" }) })]);
       return true;
     }
   } catch (e) {}
