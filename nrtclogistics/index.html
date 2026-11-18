@@ -93,9 +93,10 @@ label.f { display: block; font-size: 12.5px; font-weight: 600; color: var(--mute
 
 /* Sized to the card, not the window, so the buttons can never spill past its edge */
 .items-card { container-type: inline-size; }
-.add-bar { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
+.add-bar { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; }
 .add-bar .btn { min-width: 0; padding: 7px 8px; }
-@container (min-width: 720px) { .add-bar { grid-template-columns: repeat(6, minmax(0, 1fr)); } }
+@container (max-width: 470px) { .add-bar { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+@container (min-width: 820px) { .add-bar { grid-template-columns: repeat(7, minmax(0, 1fr)); } }
 .add-bar .btn { flex: 1 1 auto; justify-content: center; }
 
 .day { margin-top: 14px; }
@@ -109,7 +110,7 @@ label.f { display: block; font-size: 12.5px; font-weight: 600; color: var(--mute
 .add-bar .ic { width: 22px; height: 22px; }
 .add-bar .ic svg { width: 12px; height: 12px; }
 .ic-flight { --c: var(--sky); } .ic-rental { --c: var(--mint); } .ic-hotel { --c: var(--aqua); }
-.ic-drive { --c: var(--silver); } .ic-meeting { --c: var(--nrtc-red); } .ic-note { --c: #fff; box-shadow: inset 0 0 0 1.5px var(--line-2); }
+.ic-drive { --c: var(--silver); } .ic-meeting { --c: var(--nrtc-red); } .ic-meal { --c: #F4B4B7; /* NRTC Red tint */ } .ic-note { --c: #fff; box-shadow: inset 0 0 0 1.5px var(--line-2); }
 .it .t { font-family: var(--font-display); font-size: 12.5px; color: var(--muted); }
 .it .w { font-size: 14px; min-width: 0; }
 .it .w .who { font-weight: 700; }
@@ -202,6 +203,7 @@ dialog::backdrop { background: rgba(16, 24, 34, .35); }
         <button class="btn" data-add="hotel"><span class="ic ic-hotel" data-ic="hotel"></span>Hotel</button>
         <button class="btn" data-add="drive"><span class="ic ic-drive" data-ic="drive"></span>Drive</button>
         <button class="btn" data-add="meeting"><span class="ic ic-meeting" data-ic="meeting"></span>Meeting</button>
+        <button class="btn" data-add="meal"><span class="ic ic-meal" data-ic="meal"></span>Meal</button>
         <button class="btn" data-add="note"><span class="ic ic-note" data-ic="note"></span>Note</button>
       </div>
       <div id="items"></div>
@@ -321,6 +323,7 @@ const TYPES = {
   hotel: { label: "Hotel", svg: '<path d="M2 4v16"/><path d="M2 8h18a2 2 0 0 1 2 2v10"/><path d="M2 17h20"/><path d="M6 8v9"/>' },
   drive: { label: "Drive", svg: '<circle cx="6" cy="19" r="3"/><path d="M9 19h8.5a3.5 3.5 0 0 0 0-7h-11a3.5 3.5 0 0 1 0-7H15"/><circle cx="18" cy="5" r="3"/>' },
   meeting: { label: "Meeting", svg: '<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>' },
+  meal: { label: "Meal", svg: '<path d="M3 2v7c0 1.1.9 2 2 2h4a2 2 0 0 0 2-2V2"/><path d="M7 2v20"/><path d="M21 15V2a5 5 0 0 0-5 5v6c0 1.1.9 2 2 2h3Zm0 0v7"/>' },
   note: { label: "Note", svg: '<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="M16 13H8"/><path d="M16 17H8"/>' },
 };
 
@@ -428,6 +431,9 @@ function placesFor(t) {
     if (!c.name) return;
     const where = [c.town, c.state].filter(Boolean).join(", ");
     add({ ref: `coop:${i}`, short: where || c.name, long: `${c.name}${where ? ` (${where})` : ""}`, lat: c.lat, lon: c.lon, address: c.address, q: c.address || where });
+  });
+  t.items.filter((i) => i.type === "meal" && i.place).forEach((m) => {
+    add({ ref: `meal:${m.id}`, short: m.place, long: `${m.place} (${m.kind || "meal"}, ${fmtShort(m.date)})`, lat: m.lat, lon: m.lon, address: m.address, q: m.address || m.place });
   });
   t.items.filter((i) => i.type === "hotel" && i.name).forEach((h) => {
     add({ ref: `hotel:${h.id}`, short: h.city || h.name, long: `${h.name}${h.city ? ` (${h.city})` : ""}`, lat: h.lat, lon: h.lon, address: h.address, q: h.address || [h.name, h.city].filter(Boolean).join(", ") });
@@ -562,6 +568,7 @@ async function geocode(q) {
 function keepCoords(t, P) {
   if (!P || P.lat == null) return;
   if (P.ref.startsWith("coop:")) { const c = t.coops[+P.ref.slice(5)]; if (c && c.lat == null) Object.assign(c, { lat: P.lat, lon: P.lon }); }
+  if (P.ref.startsWith("meal:")) { const m = t.items.find((x) => x.id === P.ref.slice(5)); if (m && m.lat == null) Object.assign(m, { lat: P.lat, lon: P.lon }); }
   if (P.ref.startsWith("hotel:")) { const h = t.items.find((x) => x.id === P.ref.slice(6)); if (h && h.lat == null) Object.assign(h, { lat: P.lat, lon: P.lon }); }
   save();
 }
@@ -630,6 +637,8 @@ function flightDir(it) {
   if (homes.includes((it.from || "").toUpperCase())) return "in";
   return it.arr ? "in" : "out";
 }
+// Where an item happens, as a drive destination ref
+function destRef(x) { return x.type === "meeting" ? x.loc && x.loc.ref : x.type === "meal" ? `meal:${x.id}` : null; }
 function flightLabel(it) { return [it.airline, it.number].filter(Boolean).join(" "); }
 
 function buildRows(t, opts) {
@@ -677,6 +686,10 @@ function buildRows(t, opts) {
       const where = it.loc && it.loc.ref === "custom" ? it.loc.label : P && P.ref.startsWith("hotel:") ? P.long : (P && P.address) || "";
       rows.push({ ...base, date: it.date, key: toMin(it.start), time: fmtRange(it.start, it.end), who: whoTag(t, it.travelers),
         what: it.title || "Meeting", detail: join(it.coop && !(it.title || "").includes(it.coop) ? it.coop : "", opts.addr && where, it.virtual && "Virtual", it.note) });
+    } else if (it.type === "meal") {
+      const dflt = { Breakfast: 450, Lunch: 720, Dinner: 1110 }[it.kind];
+      rows.push({ ...base, date: it.date, key: toMin(it.time) ?? dflt ?? null, time: fmtTime(it.time), who: whoTag(t, it.travelers),
+        what: `${it.kind || "Meal"}${it.place ? `: ${it.place}` : ""}`, detail: join(opts.addr && it.address, it.res && (opts.conf ? `Reservation: ${it.res}` : "Reservation made"), it.note) });
     } else if (it.type === "note") {
       rows.push({ ...base, date: it.date, key: toMin(it.time), time: fmtTime(it.time), who: whoTag(t, it.travelers), what: it.text || "", detail: "" });
     }
@@ -702,10 +715,10 @@ function buildRows(t, opts) {
           if (mEnd.length) r.key = Math.max(...mEnd) + 0.5;
         }
         if (r.key == null && it.minutes != null) {
-          const next = list.filter((m) => m.type === "meeting" && m.key != null && m.item.loc && m.item.loc.ref === B && B !== "custom").sort((a, b) => a.key - b.key)[0];
+          const next = list.filter((m) => m.key != null && B && B !== "custom" && (m.type === "meeting" || m.type === "meal") && destRef(m.item) === B).sort((a, b) => a.key - b.key)[0];
           if (next) {
             // No arrive-by set: aim to arrive 15 min before the meeting there
-            const arrive = next.key - 15, leave = Math.floor((arrive - it.minutes) / 5) * 5;
+            const arrive = next.key - (next.type === "meal" ? 5 : 15), leave = Math.floor((arrive - it.minutes) / 5) * 5;
             r.key = leave; r.time = fmtTime(fromMin(leave));
             r.detail = [r.detail, `arrive by ${fmtTime(fromMin(arrive))}`].filter(Boolean).join(" · ");
           }
@@ -1019,6 +1032,15 @@ function openItem(it, type) {
     b += `<label style="display:flex;gap:6px;align-items:center;font-size:13.5px;margin:-2px 0 10px"><input type="checkbox" id="fVirtual" ${it.virtual ? "checked" : ""}> Virtual / Teams</label>`;
     b += inp("fNote", "Note (optional)", it.note);
     b += travelerPicker(it.travelers, "Who's attending");
+  } else if (type === "meal") {
+    if (isNew) it.kind = "Lunch";
+    b += `<div class="field"><label class="f">Meal</label><div class="chips" id="fKind">${["Breakfast", "Lunch", "Dinner", "Coffee", "Other"].map((k) => `<span class="chip" role="button" tabindex="0" data-k="${k}" aria-pressed="${(it.kind || "Other") === k || (k === "Other" && !["Breakfast", "Lunch", "Dinner", "Coffee"].includes(it.kind))}">${k}</span>`).join("")}</div>
+      <input class="f-input" id="fKindX" style="margin-top:6px;${["Breakfast", "Lunch", "Dinner", "Coffee"].includes(it.kind) ? "display:none" : ""}" value="${esc(["Breakfast", "Lunch", "Dinner", "Coffee"].includes(it.kind) ? "" : it.kind || "")}" placeholder="e.g. Team happy hour"></div>`;
+    b += `<div class="grid2">${inp("fPlace", "Where", it.place, 'placeholder="Restaurant name (or TBD)"')}${inp("fRes", "Reservation (optional)", it.res, 'placeholder="7:00 PM under McNeely, party of 4"')}</div>`;
+    b += inp("fAddress", "Address (optional)", it.address, 'placeholder="Shows in the email and works as a drive stop"');
+    b += `<div class="grid2">${inp("fDate", "Date", it.date, 'type="date" required')}${inp("fTime", "Time (optional)", it.time, 'type="time"')}</div>`;
+    b += inp("fNote", "Note (optional)", it.note, 'placeholder="e.g. hosted by the co-op GM"');
+    b += travelerPicker(it.travelers, "Who's going");
   } else if (type === "note") {
     b += inp("fText", "Note", it.text, 'required placeholder="e.g. Dinner with the GM at 6"');
     b += `<div class="grid2">${inp("fDate", "Date", it.date, 'type="date" required')}${inp("fTime", "Time (optional)", it.time, 'type="time"')}</div>`;
@@ -1040,6 +1062,8 @@ function readPlace(id) {
 
 function wireDialog(it) {
   const body = $("#dlgBody");
+  const kind = $("#fKind");
+  if (kind) kind.addEventListener("click", (e) => { const c = e.target.closest(".chip"); if (!c) return; $$(".chip", kind).forEach((x) => x.setAttribute("aria-pressed", x === c)); $("#fKindX").style.display = c.dataset.k === "Other" ? "" : "none"; });
   const who = $("#fWho");
   if (who) who.addEventListener("click", (e) => { const c = e.target.closest(".chip"); if (!c) return; c.setAttribute("aria-pressed", c.getAttribute("aria-pressed") !== "true"); onFlightChange(); });
   $$("select[id$=P]", body).forEach((s) => s.addEventListener("change", () => {
@@ -1082,8 +1106,8 @@ function wireDialog(it) {
     if (it.type !== "drive" || $("#fArrive").value || driveMode() !== "arrive") return;
     const to = readPlace("fToP"), date = $("#fDate").value;
     if (!to || to.ref === "custom") return;
-    const m = trip().items.filter((x) => x.type === "meeting" && x.date === date && x.start && x.loc && x.loc.ref === to.ref).sort((a, b) => a.start.localeCompare(b.start))[0];
-    if (m) $("#fArrive").value = fromMin(toMin(m.start) - 15);
+    const m = trip().items.filter((x) => x.date === date && (x.start || x.time) && (x.type === "meeting" || x.type === "meal") && destRef(x) === to.ref).sort((a, b) => (a.start || a.time).localeCompare(b.start || b.time))[0];
+    if (m) $("#fArrive").value = fromMin(toMin(m.start || m.time) - (m.type === "meal" ? 5 : 15));
   }
   function updateLeave() {
     const el = $("#fLeave"); if (!el) return;
@@ -1137,6 +1161,12 @@ $("#itemForm").addEventListener("submit", async (e) => {
       t.coops.push(c); if (!it.loc.ref) it.loc = { ref: `coop:${t.coops.length - 1}` };
       ensureCoords(c, [c.town, c.state].filter(Boolean).join(", ")).then(() => { save(); });
     }
+  }
+  if (it.type === "meal") {
+    const k = ($("#fKind [aria-pressed=true]") || {}).dataset?.k || "Other";
+    const old = t.items.find((x) => x.id === it.id);
+    Object.assign(it, { kind: k === "Other" ? v("fKindX") || "Meal" : k, place: v("fPlace"), res: v("fRes"), address: v("fAddress"), time: v("fTime"), note: v("fNote"), travelers: readWho() });
+    if (!old || old.address !== it.address || old.place !== it.place) { delete it.lat; delete it.lon; }
   }
   if (it.type === "note") Object.assign(it, { text: v("fText"), time: v("fTime"), travelers: readWho() });
 
