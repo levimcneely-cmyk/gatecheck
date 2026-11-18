@@ -1,0 +1,1006 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex, nofollow">
+<title>NRTC Logistics Hub</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🧳</text></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700;800&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #f5f3ee;
+  --card: #ffffff;
+  --ink: #16202c;
+  --ink-2: #33465f;
+  --muted: #66758a;
+  --line: #e1ddd4;
+  --line-2: #cfc9bc;
+  --amber: #ffb703;
+  --amber-ink: #8a5a00;
+  --amber-soft: #fff4d6;
+  --teal: #0f766e;
+  --coral: #be123c;
+  --font-display: "Space Mono", ui-monospace, monospace;
+  --font-body: "Archivo", system-ui, sans-serif;
+}
+* { box-sizing: border-box; }
+html { color-scheme: light; }
+body { margin: 0; background: var(--bg); color: var(--ink); font-family: var(--font-body); line-height: 1.45; -webkit-font-smoothing: antialiased; }
+button, input, select, textarea { font: inherit; color: inherit; }
+a { color: var(--teal); }
+
+.topbar { border-bottom: 1px solid var(--line); background: var(--card); }
+.topbar .in { max-width: 1320px; margin: 0 auto; padding: 14px 20px; display: flex; flex-wrap: wrap; align-items: center; gap: 12px; }
+.brand { display: flex; align-items: baseline; gap: 8px; margin-right: auto; }
+.brand-mark { color: var(--amber); font-size: 20px; transform: rotate(-8deg); display: inline-block; }
+.brand-name { font-family: var(--font-display); font-weight: 700; font-size: 19px; letter-spacing: .01em; }
+.brand-sub { font-size: 12.5px; color: var(--muted); }
+.brand-sub a { color: var(--muted); }
+
+.btn { border: 1px solid var(--line-2); background: var(--card); border-radius: 8px; padding: 7px 12px; font-size: 13.5px; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
+.btn:hover { border-color: var(--ink-2); }
+.btn.primary { background: var(--amber); border-color: var(--amber); color: #1b1300; }
+.btn.primary:hover { background: #ffc633; }
+.btn.ghost { border-color: transparent; background: transparent; }
+.btn.danger { color: var(--coral); }
+.btn.sm { padding: 4px 8px; font-size: 12.5px; }
+.btn:disabled { opacity: .45; cursor: default; }
+
+select.trip-select { border: 1px solid var(--line-2); border-radius: 8px; padding: 7px 10px; background: var(--card); font-weight: 600; max-width: 320px; }
+
+.layout { max-width: 1320px; margin: 0 auto; padding: 20px; display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.05fr); gap: 20px; align-items: start; }
+@media (max-width: 980px) { .layout { grid-template-columns: 1fr; } }
+
+.card { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 18px; }
+.card + .card { margin-top: 16px; }
+.card h2 { margin: 0 0 12px; font-size: 13px; font-family: var(--font-display); letter-spacing: .1em; text-transform: uppercase; color: var(--amber-ink); }
+
+label.f { display: block; font-size: 12.5px; font-weight: 600; color: var(--muted); margin: 0 0 4px; }
+.in-text, .f-input { width: 100%; border: 1px solid var(--line-2); border-radius: 8px; padding: 8px 10px; background: #fff; font-size: 14px; }
+.in-text:focus, .f-input:focus, select:focus, textarea:focus { outline: 2px solid var(--amber); outline-offset: 0; border-color: var(--amber); }
+.trip-title { font-size: 20px; font-weight: 700; border: 1px solid transparent; padding: 4px 8px; margin-left: -8px; width: calc(100% + 8px); }
+.trip-title:hover { border-color: var(--line); }
+
+.grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.grid3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; }
+.grid4 { display: grid; grid-template-columns: 2fr 1.2fr .7fr auto; gap: 8px; align-items: end; }
+@media (max-width: 560px) { .grid3 { grid-template-columns: 1fr 1fr; } .grid4 { grid-template-columns: 1fr 1fr; } }
+.field { margin-bottom: 10px; }
+.hint { font-size: 12px; color: var(--muted); margin: 4px 0 0; }
+
+.group-label { font-size: 11.5px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); margin: 10px 0 6px; }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.chip { border: 1px solid var(--line-2); background: #fff; border-radius: 999px; padding: 4px 11px; font-size: 13px; cursor: pointer; user-select: none; }
+.chip[aria-pressed="true"] { background: var(--ink); border-color: var(--ink); color: #fff; }
+.chip small { opacity: .65; margin-left: 4px; }
+
+.coop-row { padding: 10px 0; border-top: 1px dashed var(--line); }
+.coop-row:first-child { border-top: 0; padding-top: 0; }
+
+.add-bar { display: flex; flex-wrap: wrap; gap: 6px; }
+.add-bar .btn { flex: 1 1 auto; justify-content: center; }
+
+.day { margin-top: 14px; }
+.day-h { font-family: var(--font-display); font-size: 12.5px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--ink-2); border-bottom: 1px solid var(--line); padding-bottom: 4px; margin-bottom: 4px; }
+.it { display: grid; grid-template-columns: 26px 96px minmax(0,1fr) auto; gap: 8px; align-items: center; padding: 6px 4px; border-radius: 8px; }
+.it:hover { background: var(--amber-soft); }
+.it .ico { text-align: center; }
+.it .t { font-family: var(--font-display); font-size: 12.5px; color: var(--muted); }
+.it .w { font-size: 14px; min-width: 0; }
+.it .w .who { font-weight: 700; }
+.it .w .d { color: var(--muted); font-size: 12.5px; }
+.it .acts { display: flex; gap: 2px; opacity: .55; }
+.it:hover .acts { opacity: 1; }
+.empty { color: var(--muted); font-size: 14px; padding: 18px 0 6px; text-align: center; }
+
+.preview-card { position: sticky; top: 16px; }
+@media (max-width: 980px) { .preview-card { position: static; } }
+.pv-tools { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin-bottom: 10px; }
+.pv-opts { display: flex; flex-wrap: wrap; gap: 14px; font-size: 13px; color: var(--ink-2); margin: 0 0 12px; }
+.pv-opts label { display: inline-flex; gap: 6px; align-items: center; cursor: pointer; }
+.subject { display: flex; gap: 8px; align-items: center; background: #faf8f3; border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; margin-bottom: 12px; font-size: 13.5px; }
+.subject b { color: var(--muted); font-weight: 600; }
+.subject span { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.paper { background: #fff; border: 1px solid var(--line); border-radius: 8px; padding: 22px 24px; min-height: 200px; overflow-x: auto; }
+
+dialog { border: 0; border-radius: 14px; padding: 0; width: min(560px, calc(100vw - 24px)); max-height: calc(100vh - 32px); box-shadow: 0 20px 60px rgba(10,20,30,.25); }
+dialog::backdrop { background: rgba(16, 24, 34, .35); }
+.dlg-h { display: flex; align-items: center; justify-content: space-between; padding: 14px 18px; border-bottom: 1px solid var(--line); position: sticky; top: 0; background: #fff; z-index: 1; }
+.dlg-h h3 { margin: 0; font-size: 17px; }
+.dlg-b { padding: 16px 18px 6px; }
+.dlg-f { display: flex; justify-content: space-between; gap: 8px; padding: 12px 18px; border-top: 1px solid var(--line); position: sticky; bottom: 0; background: #fff; }
+.calc { font-size: 13px; padding: 8px 10px; border-radius: 8px; background: #f2f7f6; color: var(--teal); margin-top: 2px; }
+.calc.warn { background: #fff1f2; color: var(--coral); }
+
+.toast { position: fixed; left: 50%; bottom: 22px; transform: translateX(-50%) translateY(30px); opacity: 0; background: var(--ink); color: #fff; padding: 10px 16px; border-radius: 10px; font-size: 14px; transition: .2s; pointer-events: none; z-index: 50; }
+.toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+.site-footer { padding: 10px 0 30px; color: var(--muted); }
+.team-row { display: grid; grid-template-columns: 1fr 120px 80px; gap: 8px; align-items: center; padding: 4px 0; font-size: 14px; }
+.team-row small { color: var(--muted); }
+
+/* Printing: only the itinerary, always black-on-white */
+@media print {
+  html, body { background: #fff !important; color: #000 !important; color-scheme: light; }
+  .topbar, .editor, .pv-tools, .pv-opts, .subject, .site-footer, .toast, dialog { display: none !important; }
+  .layout { display: block; padding: 0; max-width: none; }
+  .card, .paper { border: 0 !important; padding: 0 !important; box-shadow: none !important; }
+  .preview-card h2 { display: none; }
+  * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+}
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <div class="in">
+    <div class="brand">
+      <span class="brand-mark">✈</span>
+      <span class="brand-name">NRTC Logistics Hub</span>
+      <span class="brand-sub">· backstage at <a href="../">Gate Check</a></span>
+    </div>
+    <select id="tripSelect" class="trip-select" aria-label="Trip"></select>
+    <button class="btn primary" id="newTrip">+ New trip</button>
+    <button class="btn" id="dupTrip" title="Copy this trip as a starting point">Duplicate</button>
+    <button class="btn" id="teamBtn">Team</button>
+    <button class="btn" id="moreBtn">Backup ▾</button>
+  </div>
+</header>
+
+<main class="layout">
+  <section class="editor">
+    <div class="card">
+      <input id="tripTitle" class="in-text trip-title" placeholder="Trip name (e.g. WCE Executive Readout)" aria-label="Trip name">
+      <p class="hint" id="tripDates" style="margin:2px 0 8px"></p>
+
+      <div class="group-label">Co-op(s)</div>
+      <div id="coops"></div>
+      <button class="btn sm" id="addCoop">+ Add co-op</button>
+
+      <div id="roster"></div>
+
+      <div class="field" style="margin-top:12px">
+        <label class="f" for="tripNotes">Trip notes (shows at the top of the email)</label>
+        <textarea id="tripNotes" class="f-input" rows="2" placeholder="Optional — dress code, agenda link, who's presenting…"></textarea>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Itinerary</h2>
+      <div class="add-bar">
+        <button class="btn" data-add="flight">✈️ Flight</button>
+        <button class="btn" data-add="rental">🚗 Rental car</button>
+        <button class="btn" data-add="hotel">🏨 Hotel</button>
+        <button class="btn" data-add="drive">🛣️ Drive</button>
+        <button class="btn" data-add="meeting">📅 Meeting</button>
+        <button class="btn" data-add="note">📝 Note</button>
+      </div>
+      <div id="items"></div>
+    </div>
+    <div style="margin-top:12px;text-align:right">
+      <button class="btn ghost danger sm" id="delTrip">Delete this trip</button>
+    </div>
+  </section>
+
+  <section class="card preview-card">
+    <h2>Email preview</h2>
+    <div class="pv-tools">
+      <button class="btn primary" id="copyHtml">📋 Copy for email</button>
+      <button class="btn" id="copyText">Copy as plain text</button>
+      <button class="btn" id="printBtn">🖨 Print</button>
+    </div>
+    <div class="pv-opts">
+      <label><input type="checkbox" id="optConf" checked> Confirmation #s</label>
+      <label><input type="checkbox" id="optAddr" checked> Addresses</label>
+      <label><input type="checkbox" id="optMiles"> Mileage</label>
+    </div>
+    <div class="subject"><b>Subject</b><span id="subject"></span><button class="btn sm" id="copySubject">Copy</button></div>
+    <div class="paper" id="paper"></div>
+  </section>
+</main>
+
+<footer class="site-footer">
+  <a class="herdco-footer" href="https://herdcoindy.com/" target="_blank" rel="noopener" style="display:flex;flex-direction:column;align-items:center;gap:8px;box-sizing:border-box;width:100%;flex:1 0 100%;margin:18px auto 0;padding:0 12px 12px;color:inherit;text-decoration:none;font-size:13px;line-height:1.4;opacity:.75;text-align:center"><span aria-hidden="true" style="display:block;width:46px;height:30px;background-color:currentColor;-webkit-mask:url(data:image/png;base64,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) center/contain no-repeat;mask:url(data:image/png;base64,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) center/contain no-repeat"></span><span>&copy; 2026 The Herd Co. · Greenwood / Indianapolis, Indiana</span></a>
+</footer>
+
+<dialog id="itemDlg">
+  <form method="dialog" id="itemForm">
+    <div class="dlg-h"><h3 id="dlgTitle">Add</h3><button class="btn ghost" value="cancel" formnovalidate>✕</button></div>
+    <div class="dlg-b" id="dlgBody"></div>
+    <div class="dlg-f">
+      <button class="btn ghost danger" type="button" id="dlgDelete">Delete</button>
+      <div style="display:flex;gap:8px">
+        <button class="btn" value="cancel" formnovalidate>Cancel</button>
+        <button class="btn primary" type="submit" id="dlgSave">Save</button>
+      </div>
+    </div>
+  </form>
+</dialog>
+
+<dialog id="teamDlg">
+  <div class="dlg-h"><h3>Team &amp; home airports</h3><button class="btn ghost" onclick="this.closest('dialog').close()">✕</button></div>
+  <div class="dlg-b">
+    <p class="hint" style="margin:0 0 10px">Home airports pre-fill the "from" on a new flight and tell the hub which flights are heading out vs. heading home.</p>
+    <div id="teamList"></div>
+    <div class="group-label">Add someone</div>
+    <div class="grid3">
+      <input class="f-input" id="tmName" placeholder="Full name">
+      <select class="f-input" id="tmGroup"><option>Advisory</option><option>RBMS</option><option>Other</option></select>
+      <input class="f-input" id="tmHome" placeholder="Home airport" maxlength="3" style="text-transform:uppercase">
+    </div>
+    <div style="margin:8px 0 14px"><button class="btn sm" id="tmAdd">+ Add to team</button></div>
+  </div>
+</dialog>
+
+<dialog id="moreDlg">
+  <div class="dlg-h"><h3>Backup &amp; sharing</h3><button class="btn ghost" onclick="this.closest('dialog').close()">✕</button></div>
+  <div class="dlg-b">
+    <p class="hint" style="margin:0 0 12px">Trips are saved in this browser. Export a backup now and then, or send a share link so a teammate can open (and keep) a copy of a trip.</p>
+    <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:16px">
+      <button class="btn" id="shareLink">🔗 Copy share link for this trip</button>
+      <button class="btn" id="exportAll">⬇ Export all trips (.json)</button>
+      <label class="btn">⬆ Import .json<input type="file" id="importFile" accept="application/json,.json" hidden></label>
+    </div>
+  </div>
+</dialog>
+
+<datalist id="apList"></datalist>
+<datalist id="coopList"></datalist>
+<div class="toast" id="toast"></div>
+
+<script src="airports.js"></script>
+<script>
+"use strict";
+/* ================== Config ================== */
+const STORE_KEY = "nrtclog:v1";
+const TEAM_KEY = "nrtclog:team";
+// Same published co-op sheet Gate Check's map uses — feeds the co-op name autocomplete.
+const COOPS_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vR54CnrLNkh_UuMJ1Hetsu3DhQ0E4vm7B48yazB-ODIQNcV7zXq42U0CWQ5RjaUSXarnB8L4VSPYl81/pub?gid=316726175&single=true&output=csv";
+
+const DEFAULT_TEAM = [
+  { name: "Mark Davis", group: "RBMS", home: "" },
+  { name: "Steve Hanson", group: "RBMS", home: "" },
+  { name: "Matt Timmons", group: "RBMS", home: "" },
+  { name: "Michael Jablonski", group: "RBMS", home: "" },
+  { name: "Chris Bradley", group: "RBMS", home: "" },
+  { name: "Rodney Pugh", group: "RBMS", home: "" },
+  { name: "Josh Pepple", group: "Advisory", town: "Pass Christian, MS", home: "GPT" },
+  { name: "Levi McNeely", group: "Advisory", town: "Greenwood, IN", home: "IND" },
+  { name: "Evan Schmitt", group: "Advisory", town: "McKee, KY", home: "LEX" },
+  { name: "Jake Bailey", group: "Advisory", town: "Valparaiso, IN", home: "ORD" },
+  { name: "Kat Romero", group: "Advisory", town: "Manchester, NH", home: "MHT" },
+  { name: "Thomas McCollum", group: "Advisory", town: "Nashville, TN", home: "BNA" },
+  { name: "Brandon Sutter", group: "Advisory", town: "Kouts, IN", home: "ORD" },
+];
+
+const TYPES = {
+  flight: { icon: "✈️", label: "Flight" },
+  rental: { icon: "🚗", label: "Rental car" },
+  hotel: { icon: "🏨", label: "Hotel" },
+  drive: { icon: "🛣️", label: "Drive" },
+  meeting: { icon: "📅", label: "Meeting" },
+  note: { icon: "📝", label: "Note" },
+};
+
+/* ================== Small helpers ================== */
+const $ = (s, r = document) => r.querySelector(s);
+const $$ = (s, r = document) => [...r.querySelectorAll(s)];
+const uid = () => Math.random().toString(36).slice(2, 10);
+const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const clone = (o) => JSON.parse(JSON.stringify(o));
+const first = (n) => String(n || "").trim().split(/\s+/)[0];
+
+function toast(msg) {
+  const t = $("#toast"); t.textContent = msg; t.classList.add("show");
+  clearTimeout(toast._t); toast._t = setTimeout(() => t.classList.remove("show"), 2200);
+}
+function toMin(hhmm) { if (!hhmm) return null; const [h, m] = hhmm.split(":").map(Number); return h * 60 + m; }
+function fromMin(min) { min = ((Math.round(min) % 1440) + 1440) % 1440; return `${String(Math.floor(min / 60)).padStart(2, "0")}:${String(min % 60).padStart(2, "0")}`; }
+function fmtTime(hhmm) {
+  if (!hhmm) return "";
+  let [h, m] = hhmm.split(":").map(Number); const ap = h >= 12 ? "PM" : "AM"; h = h % 12 || 12;
+  return `${h}:${String(m).padStart(2, "0")} ${ap}`;
+}
+function fmtRange(a, b) {
+  if (!b) return fmtTime(a);
+  const A = fmtTime(a), B = fmtTime(b);
+  return A.slice(-2) === B.slice(-2) ? `${A.slice(0, -3)}–${B}` : `${A}–${B}`;
+}
+function fmtDur(min) {
+  if (min == null || isNaN(min)) return "";
+  min = Math.max(5, Math.round(min / 5) * 5);
+  const h = Math.floor(min / 60), m = min % 60;
+  if (!h) return `${m} min`;
+  return m ? `${h} hr ${m} min` : `${h} hr${h > 1 ? "s" : ""}`;
+}
+function parseDur(s) { // "4:30", "4h30", "270", "4.5h"
+  s = String(s || "").trim().toLowerCase(); if (!s) return null;
+  let m = s.match(/^(\d+):(\d{1,2})$/); if (m) return +m[1] * 60 + +m[2];
+  m = s.match(/^(\d+(?:\.\d+)?)\s*h(?:rs?|ours?)?\s*(?:(\d+)\s*m(?:in)?)?$/); if (m) return Math.round(+m[1] * 60 + (+m[2] || 0));
+  m = s.match(/^(\d+)\s*m(?:in)?$/); if (m) return +m[1];
+  if (/^\d+(\.\d+)?$/.test(s)) return +s <= 12 ? Math.round(+s * 60) : Math.round(+s);
+  return null;
+}
+function dateObj(iso) { const [y, m, d] = iso.split("-").map(Number); return new Date(y, m - 1, d); }
+function fmtDay(iso) { return dateObj(iso).toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" }); }
+function fmtShort(iso) { return dateObj(iso).toLocaleDateString("en-US", { month: "short", day: "numeric" }); }
+function addDays(iso, n) { const d = dateObj(iso); d.setDate(d.getDate() + n); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`; }
+function apInfo(code) { const a = window.AP && AP[(code || "").toUpperCase()]; return a ? { city: a[0], state: a[1], lat: a[2], lon: a[3] } : null; }
+
+/* ================== Storage ================== */
+let DB = load();
+let TEAM = loadTeam();
+function load() {
+  try { const d = JSON.parse(localStorage.getItem(STORE_KEY)); if (d && d.trips) return d; } catch (e) {}
+  const t = sampleTrip(); return { trips: [t], current: t.id, opts: { conf: true, addr: true, miles: false } };
+}
+function save() { try { localStorage.setItem(STORE_KEY, JSON.stringify(DB)); } catch (e) { toast("Couldn't save in this browser"); } }
+function loadTeam() { try { const t = JSON.parse(localStorage.getItem(TEAM_KEY)); if (Array.isArray(t) && t.length) return t; } catch (e) {} return clone(DEFAULT_TEAM); }
+function saveTeam() { localStorage.setItem(TEAM_KEY, JSON.stringify(TEAM)); }
+const trip = () => DB.trips.find((t) => t.id === DB.current) || DB.trips[0];
+function homeOf(name) { const p = TEAM.find((x) => x.name === name); return (p && p.home || "").toUpperCase(); }
+
+function newTrip() { return { id: uid(), title: "", coops: [], travelers: [], notes: "", items: [] }; }
+
+function sampleTrip() {
+  // Rebuilt from the Aug 31 – Sep 2, 2026 Western Co-op trip email, so there's something to look at.
+  return {
+    id: uid(), title: "WCE Executive Readout (example)", notes: "",
+    coops: [{ name: "Western Cooperative Electric", town: "WaKeeney", state: "KS", address: "", lat: 39.0245, lon: -99.882 }],
+    travelers: ["Levi McNeely", "Thomas McCollum"],
+    items: [
+      { id: uid(), type: "flight", date: "2026-08-31", travelers: ["Thomas McCollum"], from: "BNA", to: "DEN", dep: "", arr: "10:00", dir: "auto" },
+      { id: uid(), type: "flight", date: "2026-08-31", travelers: ["Levi McNeely"], from: "IND", to: "DEN", dep: "", arr: "11:10", dir: "auto" },
+      { id: uid(), type: "rental", date: "2026-08-31", driver: "Levi McNeely", pickup: "DEN", company: "", time: "" },
+      { id: "s-h1", type: "hotel", date: "2026-08-31", outDate: "2026-09-01", name: "Hilton Garden Inn Hays", city: "Hays, KS", address: "", lat: 38.8792, lon: -99.3268, travelers: [] },
+      { id: uid(), type: "drive", date: "2026-08-31", from: { ref: "ap:DEN" }, to: { ref: "hotel:s-h1" }, minutes: 270, manual: true, travelers: [] },
+      { id: uid(), type: "drive", date: "2026-09-01", from: { ref: "hotel:s-h1" }, to: { ref: "coop:0" }, minutes: 30, manual: true, travelers: [] },
+      { id: uid(), type: "meeting", date: "2026-09-01", title: "WCE Executive Readout", coop: "Western Cooperative Electric", start: "13:00", end: "15:30", loc: { ref: "coop:0" }, travelers: [] },
+      { id: uid(), type: "drive", date: "2026-09-01", from: { ref: "coop:0" }, to: { ref: "hotel:s-h2" }, minutes: 240, manual: true, travelers: [] },
+      { id: "s-h2", type: "hotel", date: "2026-09-01", outDate: "2026-09-02", name: "Hilton Garden Inn Denver Airport", city: "Denver, CO", address: "", lat: 39.8, lon: -104.79, travelers: [] },
+      { id: uid(), type: "meeting", date: "2026-09-02", title: "TVEC Strategy Review Meeting", coop: "", start: "09:00", end: "11:00", loc: { ref: "" }, travelers: ["Thomas McCollum"] },
+      { id: uid(), type: "flight", date: "2026-09-02", travelers: ["Levi McNeely"], from: "DEN", to: "IND", dep: "11:15", arr: "", dir: "auto" },
+      { id: uid(), type: "flight", date: "2026-09-02", travelers: ["Thomas McCollum"], from: "DEN", to: "BNA", dep: "14:20", arr: "", dir: "auto" },
+    ],
+  };
+}
+
+/* ================== Places, geocoding, routing ================== */
+function placesFor(t) {
+  const out = [], seen = new Set();
+  const add = (p) => { if (!seen.has(p.ref)) { seen.add(p.ref); out.push(p); } };
+  t.items.forEach((it) => {
+    const codes = it.type === "flight" ? [it.from, it.to] : it.type === "rental" ? [it.pickup] : [];
+    codes.filter(Boolean).forEach((c) => {
+      const a = apInfo(c); c = c.toUpperCase();
+      add({ ref: `ap:${c}`, short: c, long: a ? `${c} — ${a.city}, ${a.state}` : c, lat: a?.lat, lon: a?.lon, q: `${c} airport` });
+    });
+  });
+  t.coops.forEach((c, i) => {
+    if (!c.name) return;
+    const where = [c.town, c.state].filter(Boolean).join(", ");
+    add({ ref: `coop:${i}`, short: where || c.name, long: `${c.name}${where ? ` (${where})` : ""}`, lat: c.lat, lon: c.lon, address: c.address, q: c.address || where });
+  });
+  t.items.filter((i) => i.type === "hotel" && i.name).forEach((h) => {
+    add({ ref: `hotel:${h.id}`, short: h.city || h.name, long: `${h.name}${h.city ? ` (${h.city})` : ""}`, lat: h.lat, lon: h.lon, address: h.address, q: h.address || [h.name, h.city].filter(Boolean).join(", ") });
+  });
+  return out;
+}
+function resolvePlace(t, p) {
+  if (!p) return null;
+  if (p.ref === "custom") return { ref: "custom", short: p.label, long: p.label, lat: p.lat, lon: p.lon, q: p.label, address: p.label };
+  if (p.ref && p.ref.startsWith("ap:")) {
+    const c = p.ref.slice(3), a = apInfo(c);
+    return { ref: p.ref, short: c, long: a ? `${c} — ${a.city}, ${a.state}` : c, lat: a?.lat, lon: a?.lon, q: `${c} airport` };
+  }
+  return placesFor(t).find((x) => x.ref === p.ref) || null;
+}
+
+async function geocode(q) {
+  q = (q || "").trim(); if (!q) return null;
+  const key = `nrtclog-geo:${q.toLowerCase()}`;
+  try { const c = localStorage.getItem(key); if (c) return JSON.parse(c); } catch (e) {}
+  try {
+    const r = await fetch(`https://nominatim.openstreetmap.org/search?format=json&limit=1&countrycodes=us,ca&q=${encodeURIComponent(q)}`, { headers: { Accept: "application/json" } });
+    const j = await r.json();
+    if (!j[0]) return null;
+    const out = { lat: +j[0].lat, lon: +j[0].lon };
+    try { localStorage.setItem(key, JSON.stringify(out)); } catch (e) {}
+    return out;
+  } catch (e) { return null; }
+}
+async function ensureCoords(obj, q) {
+  if (obj && obj.lat != null && obj.lon != null) return obj;
+  const g = await geocode(q); if (g) Object.assign(obj, g); return obj;
+}
+function haversineMi(a, b) {
+  const R = 3958.8, rad = (d) => d * Math.PI / 180;
+  const dLat = rad(b.lat - a.lat), dLon = rad(b.lon - a.lon);
+  const h = Math.sin(dLat / 2) ** 2 + Math.cos(rad(a.lat)) * Math.cos(rad(b.lat)) * Math.sin(dLon / 2) ** 2;
+  return 2 * R * Math.asin(Math.sqrt(h));
+}
+async function routeTime(a, b) {
+  try {
+    const r = await fetch(`https://router.project-osrm.org/route/v1/driving/${a.lon},${a.lat};${b.lon},${b.lat}?overview=false`);
+    const j = await r.json();
+    if (j.code === "Ok" && j.routes[0]) return { minutes: Math.round(j.routes[0].duration / 60), miles: Math.round(j.routes[0].distance / 1609.34), est: false };
+  } catch (e) {}
+  // Fallback: straight-line × 1.25 for roads, at ~58 mph average
+  const mi = haversineMi(a, b) * 1.25;
+  return { minutes: Math.round(mi / 58 * 60), miles: Math.round(mi), est: true };
+}
+
+/* ================== Itinerary rows (shared by list, email, text) ================== */
+function whoTag(t, names) {
+  names = (names || []).filter(Boolean);
+  if (!names.length) return "";
+  const all = t.travelers || [];
+  if (all.length && all.every((n) => names.includes(n)) && names.length === all.length) return "";
+  const f = names.map(first);
+  return f.length <= 2 ? f.join(" & ") : `${f.slice(0, -1).join(", ")} & ${f.at(-1)}`;
+}
+function flightDir(it) {
+  if (it.dir && it.dir !== "auto") return it.dir;
+  const homes = ((it.travelers && it.travelers.length) ? it.travelers : trip().travelers).map(homeOf);
+  if (homes.includes((it.to || "").toUpperCase())) return "out";
+  if (homes.includes((it.from || "").toUpperCase())) return "in";
+  return it.arr ? "in" : "out";
+}
+function flightLabel(it) { return [it.airline, it.number].filter(Boolean).join(" "); }
+
+function buildRows(t, opts) {
+  opts = opts || { conf: true, addr: true, miles: false };
+  const rows = [];
+  const conf = (c) => (opts.conf && c ? `Conf # ${c}` : "");
+  const join = (...a) => a.filter(Boolean).join(" · ");
+
+  t.items.forEach((it, idx) => {
+    const base = { item: it, idx, type: it.type };
+    if (it.type === "flight") {
+      const d = flightDir(it), fl = flightLabel(it), who = whoTag(t, it.travelers);
+      const from = (it.from || "").toUpperCase(), to = (it.to || "").toUpperCase();
+      if (d === "in") {
+        rows.push({ ...base, date: it.arrDate || it.date, key: toMin(it.arr), time: fmtTime(it.arr), who,
+          what: `Land ${to}`, detail: join(fl, from && `from ${from}`, it.dep && `departs ${fmtTime(it.dep)}`, conf(it.conf)) });
+      } else if (d === "out") {
+        rows.push({ ...base, date: it.date, key: toMin(it.dep), time: fmtTime(it.dep), who,
+          what: `Leave ${from}`, detail: join(fl, to && `to ${to}`, it.arr && `lands ${fmtTime(it.arr)}`, conf(it.conf)) });
+      } else {
+        rows.push({ ...base, date: it.date, key: toMin(it.dep), time: fmtTime(it.dep), who,
+          what: `Fly ${from} → ${to}`, detail: join(fl, it.arr && `lands ${fmtTime(it.arr)}`, conf(it.conf)) });
+      }
+    } else if (it.type === "rental") {
+      const ap = (it.pickup || "").toUpperCase();
+      rows.push({ ...base, date: it.date, key: toMin(it.time), time: fmtTime(it.time), who: "",
+        what: `${first(it.driver) || "Rental"}${it.driver ? " has rental car" : " car"}`, detail: join(it.company, ap && `pick up at ${ap}`, conf(it.conf)) });
+      if (it.retDate) rows.push({ ...base, date: it.retDate, key: toMin(it.retTime), time: fmtTime(it.retTime), who: "", ret: true,
+        what: "Return rental car", detail: join(ap && `at ${ap}`, first(it.driver)) });
+    } else if (it.type === "hotel") {
+      const nights = it.outDate ? Math.round((dateObj(it.outDate) - dateObj(it.date)) / 864e5) : 0;
+      rows.push({ ...base, date: it.date, key: toMin(it.time) ?? 1430, time: fmtTime(it.time), who: whoTag(t, it.travelers),
+        what: `Hotel: ${it.name || "TBD"}`, detail: join(opts.addr && (it.address || it.city), nights > 1 && `${nights} nights`, conf(it.conf)) });
+    } else if (it.type === "drive") {
+      const A = resolvePlace(t, it.from), B = resolvePlace(t, it.to);
+      const dur = it.minutes != null ? `${it.est ? "~" : ""}${fmtDur(it.minutes)}` : "";
+      rows.push({ ...base, date: it.date, key: toMin(it.time), time: fmtTime(it.time), who: whoTag(t, it.travelers),
+        what: `Drive ${A ? A.short : "?"} → ${B ? B.short : "?"}`,
+        detail: join(dur && `${dur}${opts.miles && it.miles ? ` (${it.miles} mi)` : ""}`, it.time && it.minutes != null && `arrive ~${fmtTime(fromMin(toMin(it.time) + it.minutes))}`, it.note) });
+    } else if (it.type === "meeting") {
+      const P = resolvePlace(t, it.loc);
+      const where = it.loc && it.loc.ref === "custom" ? it.loc.label : P && P.ref.startsWith("hotel:") ? P.long : (P && P.address) || "";
+      rows.push({ ...base, date: it.date, key: toMin(it.start), time: fmtRange(it.start, it.end), who: whoTag(t, it.travelers),
+        what: it.title || "Meeting", detail: join(it.coop && !(it.title || "").includes(it.coop) ? it.coop : "", opts.addr && where, it.virtual && "Virtual", it.note) });
+    } else if (it.type === "note") {
+      rows.push({ ...base, date: it.date, key: toMin(it.time), time: fmtTime(it.time), who: whoTag(t, it.travelers), what: it.text || "", detail: "" });
+    }
+  });
+
+  // Smart ordering for rows without a time.
+  const byDate = {};
+  rows.forEach((r) => (byDate[r.date] = byDate[r.date] || []).push(r));
+  Object.values(byDate).forEach((list) => {
+    const lands = list.filter((r) => r.type === "flight" && r.key != null && r.what.startsWith("Land"));
+    const landAt = (ap, names) => lands.filter((r) => r.what === `Land ${ap}` && (!names || !r.item.travelers.length || names.some((n) => r.item.travelers.includes(n)))).map((r) => r.key);
+    list.forEach((r) => {
+      if (r.key != null) return;
+      const it = r.item;
+      if (r.type === "rental" && !r.ret) {
+        const k = landAt((it.pickup || "").toUpperCase(), [it.driver]); if (k.length) r.key = Math.max(...k) + 0.3;
+      }
+      if (r.type === "drive") {
+        const A = it.from && it.from.ref, B = it.to && it.to.ref;
+        if (A && A.startsWith("ap:")) { const k = landAt(A.slice(3)); if (k.length) r.key = Math.max(...k) + 0.6; }
+        if (r.key == null) {
+          const mEnd = list.filter((m) => m.type === "meeting" && m.item.loc && m.item.loc.ref === A && m.item.loc.ref !== "custom" && m.item.end).map((m) => toMin(m.item.end));
+          if (mEnd.length) r.key = Math.max(...mEnd) + 0.5;
+        }
+        if (r.key == null && it.minutes != null) {
+          const next = list.filter((m) => m.type === "meeting" && m.key != null && m.item.loc && m.item.loc.ref === B && B !== "custom").sort((a, b) => a.key - b.key)[0];
+          if (next) {
+            const leave = Math.floor((next.key - it.minutes - 15) / 5) * 5;
+            r.key = leave; r.time = `by ${fmtTime(fromMin(leave))}`;
+          }
+        }
+      }
+    });
+    let last = 0, bump = 0;
+    list.forEach((r) => { if (r.key == null) { bump += 0.01; r.key = last + bump; } else { last = r.key; bump = 0; } });
+  });
+  rows.sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : a.key - b.key || a.idx - b.idx));
+  return rows;
+}
+function groupDays(rows) {
+  const days = []; rows.forEach((r) => { const d = days.at(-1); if (d && d.date === r.date) d.rows.push(r); else days.push({ date: r.date, rows: [r] }); });
+  return days;
+}
+function tripRange(t) {
+  const ds = buildRows(t).map((r) => r.date).filter(Boolean).sort();
+  if (!ds.length) return "";
+  const a = dateObj(ds[0]), b = dateObj(ds.at(-1)), y = b.getFullYear();
+  if (ds[0] === ds.at(-1)) return a.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+  const sameMonth = a.getMonth() === b.getMonth();
+  return `${fmtShort(ds[0])} – ${sameMonth ? b.getDate() : fmtShort(ds.at(-1))}, ${y}`;
+}
+
+/* ================== Email output ================== */
+function subjectLine(t) {
+  const coop = t.coops.filter((c) => c.name).map((c) => c.name).join(" / ");
+  const bits = [t.title && t.title.replace(/\s*\(example\)$/i, ""), !t.title && coop].filter(Boolean);
+  const r = tripRange(t);
+  return `Travel: ${bits.join(" ") || "Trip"}${r ? ` — ${r}` : ""}`;
+}
+function emailHTML(t, opts) {
+  const F = "font-family:Calibri,Arial,Helvetica,sans-serif;font-size:11pt;";
+  const days = groupDays(buildRows(t, opts));
+  const anyWho = days.some((d) => d.rows.some((r) => r.who));
+  const whoW = Math.max(60, ...days.flatMap((d) => d.rows.map((r) => (r.who || "").length * 8 + 12)));
+  let h = `<div style="${F}color:#1a1a1a;">`;
+  const coops = t.coops.filter((c) => c.name);
+  if (t.title) h += `<p style="${F}margin:0 0 2px;font-size:14pt;font-weight:bold;color:#16202c;">${esc(t.title.replace(/\s*\(example\)$/i, ""))}</p>`;
+  const meta = [];
+  const range = tripRange(t); if (range) meta.push(esc(range));
+  if (coops.length) meta.push(coops.map((c) => `${esc(c.name)}${c.town ? ` (${esc([c.town, c.state].filter(Boolean).join(", "))})` : ""}`).join("; "));
+  if (meta.length) h += `<p style="${F}margin:0 0 2px;color:#444;">${meta.join(" &nbsp;|&nbsp; ")}</p>`;
+  if (t.travelers.length) h += `<p style="${F}margin:0 0 2px;color:#444;"><b>Travelers:</b> ${t.travelers.map(esc).join(", ")}</p>`;
+  if (t.notes) h += `<p style="${F}margin:8px 0 0;">${esc(t.notes).replace(/\n/g, "<br>")}</p>`;
+  if (!days.length) h += `<p style="${F}color:#888;margin:14px 0 0;">Nothing on the itinerary yet.</p>`;
+  days.forEach((d) => {
+    h += `<p style="${F}margin:16px 0 4px;padding:0 0 3px;font-weight:bold;color:#16202c;border-bottom:1px solid #c9ced6;">${esc(fmtDay(d.date))}</p>`;
+    h += `<table cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse;${F}">`;
+    d.rows.forEach((r) => {
+      h += `<tr>`;
+      h += `<td width="118" style="${F}width:118px;padding:3px 12px 3px 0;vertical-align:top;white-space:nowrap;color:#555;">${esc(r.time)}</td>`;
+      if (anyWho) h += `<td width="${whoW}" style="${F}width:${whoW}px;padding:3px 12px 3px 0;vertical-align:top;white-space:nowrap;font-weight:bold;">${r.who ? esc(r.who) : ""}</td>`;
+      h += `<td style="${F}padding:3px 0;vertical-align:top;">${esc(r.what)}${r.detail ? `<span style="color:#666;"> &mdash; ${esc(r.detail)}</span>` : ""}</td>`;
+      h += `</tr>`;
+    });
+    h += `</table>`;
+  });
+  return h + `</div>`;
+}
+function emailText(t, opts) {
+  const out = [];
+  if (t.title) out.push(t.title.replace(/\s*\(example\)$/i, ""));
+  const range = tripRange(t), coops = t.coops.filter((c) => c.name);
+  const meta = [range, coops.map((c) => `${c.name}${c.town ? ` (${[c.town, c.state].filter(Boolean).join(", ")})` : ""}`).join("; ")].filter(Boolean);
+  if (meta.length) out.push(meta.join(" | "));
+  if (t.travelers.length) out.push(`Travelers: ${t.travelers.join(", ")}`);
+  if (t.notes) out.push("", t.notes);
+  groupDays(buildRows(t, opts)).forEach((d) => {
+    out.push("", fmtDay(d.date));
+    d.rows.forEach((r) => {
+      const time = (r.time || "").padEnd(15);
+      out.push(`  ${time}${r.who ? `[${r.who}] ` : ""}${r.what}${r.detail ? ` — ${r.detail}` : ""}`.replace(/\s+$/, ""));
+    });
+  });
+  return out.join("\n");
+}
+
+/* ================== Rendering ================== */
+function render() {
+  const t = trip();
+  // trip picker
+  $("#tripSelect").innerHTML = DB.trips.map((x) => `<option value="${x.id}" ${x.id === t.id ? "selected" : ""}>${esc(x.title || "Untitled trip")}${tripRange(x) ? ` · ${esc(tripRange(x))}` : ""}</option>`).join("");
+  if (document.activeElement !== $("#tripTitle")) $("#tripTitle").value = t.title;
+  if (document.activeElement !== $("#tripNotes")) $("#tripNotes").value = t.notes || "";
+  $("#tripDates").textContent = tripRange(t) || "Dates fill in from the itinerary.";
+  renderCoops(); renderRoster(); renderItems(); renderPreview();
+}
+
+function renderCoops() {
+  const t = trip();
+  $("#coops").innerHTML = t.coops.map((c, i) => `
+    <div class="coop-row" data-i="${i}">
+      <div class="grid4">
+        <div><label class="f">Co-op</label><input class="f-input" data-k="name" list="coopList" value="${esc(c.name)}" placeholder="Start typing…"></div>
+        <div><label class="f">HQ town</label><input class="f-input" data-k="town" value="${esc(c.town)}"></div>
+        <div><label class="f">State</label><input class="f-input" data-k="state" value="${esc(c.state)}" maxlength="2" style="text-transform:uppercase"></div>
+        <button class="btn ghost sm danger" data-rm title="Remove">✕</button>
+      </div>
+      <div style="margin-top:6px"><input class="f-input" data-k="address" value="${esc(c.address)}" placeholder="HQ street address (optional — sharper drive times)"></div>
+    </div>`).join("") || `<p class="hint" style="margin:0 0 8px">No co-op yet.</p>`;
+}
+function renderRoster() {
+  const t = trip();
+  const groups = {};
+  TEAM.forEach((p) => (groups[p.group || "Other"] = groups[p.group || "Other"] || []).push(p));
+  // keep anyone on the trip who isn't in the team list
+  t.travelers.filter((n) => !TEAM.some((p) => p.name === n)).forEach((n) => (groups.Guests = groups.Guests || []).push({ name: n }));
+  $("#roster").innerHTML = Object.entries(groups).map(([g, ps]) => `
+    <div class="group-label">${esc(g)}</div>
+    <div class="chips">${ps.map((p) => `<span class="chip" role="button" tabindex="0" data-person="${esc(p.name)}" aria-pressed="${t.travelers.includes(p.name)}">${esc(p.name)}${p.town ? `<small>${esc(p.town.split(",")[0])}</small>` : ""}</span>`).join("")}</div>`).join("");
+}
+function renderItems() {
+  const t = trip();
+  const days = groupDays(buildRows(t, { conf: true, addr: true, miles: true }));
+  if (!days.length) { $("#items").innerHTML = `<p class="empty">Add the first flight, hotel or meeting above.</p>`; return; }
+  $("#items").innerHTML = days.map((d) => `
+    <div class="day"><div class="day-h">${esc(fmtDay(d.date))}</div>
+    ${d.rows.map((r) => `
+      <div class="it">
+        <span class="ico">${TYPES[r.type].icon}</span>
+        <span class="t">${esc(r.time)}</span>
+        <span class="w">${r.who ? `<span class="who">${esc(r.who)}</span> · ` : ""}${esc(r.what)}${r.detail ? `<div class="d">${esc(r.detail)}</div>` : ""}</span>
+        <span class="acts">
+          <button class="btn ghost sm" data-move="-1" data-id="${r.item.id}" title="Move earlier (untimed items)">↑</button>
+          <button class="btn ghost sm" data-move="1" data-id="${r.item.id}" title="Move later (untimed items)">↓</button>
+          <button class="btn ghost sm" data-edit="${r.item.id}" title="Edit">✎</button>
+        </span>
+      </div>`).join("")}
+    </div>`).join("");
+}
+function renderPreview() {
+  const t = trip(), o = DB.opts;
+  $("#optConf").checked = o.conf; $("#optAddr").checked = o.addr; $("#optMiles").checked = o.miles;
+  $("#paper").innerHTML = emailHTML(t, o);
+  $("#subject").textContent = subjectLine(t);
+}
+function commit() { save(); render(); }
+
+/* ================== Trip-level events ================== */
+$("#tripSelect").onchange = (e) => { DB.current = e.target.value; commit(); };
+$("#newTrip").onclick = () => { const t = newTrip(); DB.trips.unshift(t); DB.current = t.id; commit(); $("#tripTitle").focus(); };
+$("#dupTrip").onclick = () => {
+  const t = clone(trip()); t.id = uid(); t.title = `${t.title || "Trip"} (copy)`;
+  const map = {}; t.items.forEach((i) => { const n = uid(); map[i.id] = n; i.id = n; });
+  t.items.forEach((i) => ["from", "to", "loc"].forEach((k) => { if (i[k] && i[k].ref && i[k].ref.startsWith("hotel:")) i[k].ref = `hotel:${map[i[k].ref.slice(6)] || ""}`; }));
+  DB.trips.unshift(t); DB.current = t.id; commit(); toast("Trip duplicated — update the dates");
+};
+$("#delTrip").onclick = () => {
+  if (!confirm(`Delete "${trip().title || "Untitled trip"}"? This can't be undone.`)) return;
+  DB.trips = DB.trips.filter((x) => x.id !== DB.current);
+  if (!DB.trips.length) DB.trips.push(newTrip());
+  DB.current = DB.trips[0].id; commit();
+};
+$("#tripTitle").oninput = (e) => { trip().title = e.target.value; save(); renderPreview(); $("#tripSelect").selectedOptions[0].textContent = e.target.value || "Untitled trip"; };
+$("#tripNotes").oninput = (e) => { trip().notes = e.target.value; save(); renderPreview(); };
+$("#addCoop").onclick = () => { trip().coops.push({ name: "", town: "", state: "", address: "" }); commit(); const ins = $$("#coops input[data-k=name]"); ins.at(-1)?.focus(); };
+$("#coops").addEventListener("input", (e) => {
+  const row = e.target.closest(".coop-row"); if (!row) return;
+  const c = trip().coops[+row.dataset.i], k = e.target.dataset.k;
+  c[k] = k === "state" ? e.target.value.toUpperCase() : e.target.value;
+  if (k === "name") { const hit = COOP_DIR.find((x) => x.name.toLowerCase() === c.name.toLowerCase()); if (hit) { c.town = hit.town; c.state = hit.state; $("[data-k=town]", row).value = hit.town; $("[data-k=state]", row).value = hit.state; } }
+  if (k !== "name") { delete c.lat; delete c.lon; }
+  save(); renderPreview();
+});
+$("#coops").addEventListener("change", async (e) => {
+  const row = e.target.closest(".coop-row"); if (!row) return;
+  const c = trip().coops[+row.dataset.i];
+  if (c.lat == null) { await ensureCoords(c, c.address || [c.town, c.state].filter(Boolean).join(", ")); save(); }
+  render();
+});
+$("#coops").addEventListener("click", (e) => {
+  if (!e.target.closest("[data-rm]")) return;
+  const i = +e.target.closest(".coop-row").dataset.i; trip().coops.splice(i, 1); commit();
+});
+$("#roster").addEventListener("click", (e) => togglePerson(e.target.closest("[data-person]")));
+$("#roster").addEventListener("keydown", (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); togglePerson(e.target.closest("[data-person]")); } });
+function togglePerson(el) {
+  if (!el) return; const t = trip(), n = el.dataset.person;
+  t.travelers = t.travelers.includes(n) ? t.travelers.filter((x) => x !== n) : [...t.travelers, n];
+  commit();
+}
+$("#items").addEventListener("click", (e) => {
+  const ed = e.target.closest("[data-edit]"); if (ed) return openItem(trip().items.find((i) => i.id === ed.dataset.edit));
+  const mv = e.target.closest("[data-move]"); if (!mv) return;
+  const t = trip(), i = t.items.findIndex((x) => x.id === mv.dataset.id), dir = +mv.dataset.move, it = t.items[i];
+  // swap with the nearest item on the same day in that direction
+  for (let j = i + dir; j >= 0 && j < t.items.length; j += dir) {
+    if (t.items[j].date === it.date) { [t.items[i], t.items[j]] = [t.items[j], t.items[i]]; break; }
+  }
+  commit();
+});
+["optConf", "optAddr", "optMiles"].forEach((id) => ($("#" + id).onchange = (e) => { DB.opts[{ optConf: "conf", optAddr: "addr", optMiles: "miles" }[id]] = e.target.checked; save(); renderPreview(); }));
+
+/* ================== Copy / print ================== */
+async function copyRich(html, text) {
+  try {
+    if (navigator.clipboard && window.ClipboardItem) {
+      await navigator.clipboard.write([new ClipboardItem({ "text/html": new Blob([html], { type: "text/html" }), "text/plain": new Blob([text], { type: "text/plain" }) })]);
+      return true;
+    }
+  } catch (e) {}
+  // Fallback: select the rendered preview and copy it
+  const sel = getSelection(), range = document.createRange();
+  range.selectNodeContents($("#paper")); sel.removeAllRanges(); sel.addRange(range);
+  const ok = document.execCommand("copy"); sel.removeAllRanges(); return ok;
+}
+async function copyPlain(text) {
+  try { await navigator.clipboard.writeText(text); return true; } catch (e) {
+    const ta = document.createElement("textarea"); ta.value = text; document.body.appendChild(ta); ta.select();
+    const ok = document.execCommand("copy"); ta.remove(); return ok;
+  }
+}
+$("#copyHtml").onclick = async () => toast((await copyRich(emailHTML(trip(), DB.opts), emailText(trip(), DB.opts))) ? "Copied — paste into Outlook" : "Couldn't copy — try Ctrl+C on the preview");
+$("#copyText").onclick = async () => toast((await copyPlain(emailText(trip(), DB.opts))) ? "Plain text copied" : "Couldn't copy");
+$("#copySubject").onclick = async () => toast((await copyPlain(subjectLine(trip()))) ? "Subject copied" : "Couldn't copy");
+$("#printBtn").onclick = () => window.print();
+
+/* ================== Item dialog ================== */
+let EDITING = null;
+const travelerPicker = (sel, label = "Who") => {
+  const t = trip(); if (!t.travelers.length) return `<p class="hint">Pick travelers on the trip first to tag who this is for.</p>`;
+  const set = sel === "none" ? [] : sel && sel.length ? sel : t.travelers;
+  return `<div class="field"><label class="f">${label} <span style="font-weight:400">(all selected = everyone, no name tag in the email)</span></label>
+    <div class="chips" id="fWho">${t.travelers.map((n) => `<span class="chip" role="button" tabindex="0" data-n="${esc(n)}" aria-pressed="${set.includes(n)}">${esc(n)}</span>`).join("")}</div></div>`;
+};
+const inp = (id, label, val = "", attrs = "") => `<div class="field"><label class="f" for="${id}">${label}</label><input class="f-input" id="${id}" value="${esc(val)}" ${attrs}></div>`;
+function placeSelect(id, label, cur) {
+  const t = trip(), ps = placesFor(t);
+  const curRef = cur && cur.ref;
+  let opts = `<option value="">— choose —</option>`;
+  opts += ps.map((p) => `<option value="${esc(p.ref)}" ${p.ref === curRef ? "selected" : ""}>${esc(p.long)}</option>`).join("");
+  if (curRef && curRef.startsWith("ap:") && !ps.some((p) => p.ref === curRef)) opts += `<option value="${esc(curRef)}" selected>${esc(curRef.slice(3))}</option>`;
+  opts += `<option value="ap:" >Another airport…</option><option value="custom" ${curRef === "custom" ? "selected" : ""}>Other address…</option>`;
+  return `<div class="field"><label class="f" for="${id}">${label}</label><select class="f-input" id="${id}">${opts}</select>
+    <input class="f-input" id="${id}X" style="margin-top:6px;${curRef === "custom" ? "" : "display:none"}" placeholder="Address or City, ST" value="${esc(cur && cur.ref === "custom" ? cur.label : "")}">
+    <input class="f-input" id="${id}A" style="margin-top:6px;display:none;text-transform:uppercase" list="apList" maxlength="3" placeholder="Airport code"></div>`;
+}
+function lastDate() { const r = buildRows(trip()); return r.length ? r.at(-1).date : new Date().toISOString().slice(0, 10); }
+
+function openItem(it, type) {
+  const isNew = !it; const t = trip();
+  it = it ? clone(it) : { id: uid(), type, date: lastDate(), travelers: [] };
+  EDITING = { it, isNew };
+  type = it.type;
+  $("#dlgTitle").textContent = `${isNew ? "Add" : "Edit"} ${TYPES[type].label.toLowerCase()}`;
+  $("#dlgDelete").style.visibility = isNew ? "hidden" : "visible";
+  let b = "";
+  if (type === "flight") {
+    if (isNew && t.travelers.length === 1) it.from = homeOf(t.travelers[0]);
+    b += travelerPicker(isNew && t.travelers.length > 1 ? "none" : it.travelers, "Who's on this flight");
+    b += `<div class="grid2">${inp("fAirline", "Airline", it.airline, 'placeholder="e.g. Southwest"')}${inp("fNumber", "Flight #", it.number, 'placeholder="e.g. 1234"')}</div>`;
+    b += `<div class="grid2">${inp("fFrom", "From", it.from, 'list="apList" maxlength="3" style="text-transform:uppercase" placeholder="IND"')}${inp("fTo", "To", it.to, 'list="apList" maxlength="3" style="text-transform:uppercase" placeholder="DEN"')}</div>`;
+    b += `<div class="grid3">${inp("fDate", "Date", it.date, 'type="date" required')}${inp("fDep", "Departs", it.dep, 'type="time"')}${inp("fArr", "Lands", it.arr, 'type="time"')}</div>`;
+    b += `<div class="grid2"><div class="field"><label class="f" for="fDir">Show in email as</label><select class="f-input" id="fDir">
+      ${[["auto", "Auto (by home airport)"], ["in", "Arrival — “Land DEN”"], ["out", "Departure — “Leave DEN”"], ["conn", "Full leg — “Fly A → B”"]].map(([v, l]) => `<option value="${v}" ${it.dir === v ? "selected" : ""}>${l}</option>`).join("")}</select></div>
+      ${inp("fConf", "Confirmation #", it.conf)}</div>`;
+    b += `<p class="hint" id="fDirHint"></p>`;
+  } else if (type === "rental") {
+    const lastLand = buildRows(t).filter((r) => r.type === "flight" && r.what.startsWith("Land")).at(-1);
+    if (isNew) { it.driver = t.travelers.find((n) => n === "Levi McNeely") || t.travelers[0] || ""; it.pickup = lastLand ? lastLand.what.slice(5) : ""; if (lastLand) it.date = lastLand.date; }
+    b += `<div class="grid2"><div class="field"><label class="f" for="fDriver">Who has the car</label><select class="f-input" id="fDriver">${(t.travelers.length ? t.travelers : [it.driver || ""]).map((n) => `<option ${n === it.driver ? "selected" : ""}>${esc(n)}</option>`).join("")}</select></div>
+      ${inp("fCompany", "Company", it.company, 'placeholder="National, Enterprise…"')}</div>`;
+    b += `<div class="grid3">${inp("fPickup", "Pick up at", it.pickup, 'list="apList" maxlength="3" style="text-transform:uppercase"')}${inp("fDate", "Pick-up date", it.date, 'type="date" required')}${inp("fTime", "Time (optional)", it.time, 'type="time"')}</div>`;
+    b += `<div class="grid3">${inp("fRetDate", "Return date (optional)", it.retDate, 'type="date"')}${inp("fRetTime", "Return time", it.retTime, 'type="time"')}${inp("fConf", "Confirmation #", it.conf)}</div>`;
+    b += `<p class="hint">With no time, it slots in right after the driver lands.</p>`;
+  } else if (type === "hotel") {
+    if (isNew) it.outDate = addDays(it.date, 1);
+    b += inp("fName", "Hotel", it.name, 'placeholder="Hilton Garden Inn Hays" required');
+    b += `<div class="grid2">${inp("fCity", "City, ST", it.city, 'placeholder="Hays, KS"')}${inp("fConf", "Confirmation #", it.conf)}</div>`;
+    b += inp("fAddress", "Street address (optional)", it.address, 'placeholder="Used in the email and for drive times"');
+    b += `<div class="grid2">${inp("fDate", "Check in", it.date, 'type="date" required')}${inp("fOut", "Check out", it.outDate, 'type="date"')}</div>`;
+    b += travelerPicker(it.travelers, "Who's staying");
+  } else if (type === "drive") {
+    if (isNew) {
+      // Guess: from the last place we were, to the next place we need to be
+      const ps = placesFor(t), rows = buildRows(t);
+      const lastLand = rows.filter((r) => r.date === it.date && r.type === "flight" && r.what.startsWith("Land")).at(-1);
+      if (lastLand) it.from = { ref: `ap:${lastLand.what.slice(5)}` };
+      const hotelToday = t.items.find((x) => x.type === "hotel" && x.date === it.date);
+      if (hotelToday) it.to = { ref: `hotel:${hotelToday.id}` }; else if (ps.find((p) => p.ref.startsWith("coop:"))) it.to = { ref: "coop:0" };
+    }
+    b += `<div class="grid2">${placeSelect("fFromP", "From", it.from)}${placeSelect("fToP", "To", it.to)}</div>`;
+    b += `<div class="grid3">${inp("fDate", "Date", it.date, 'type="date" required')}${inp("fTime", "Leave at (optional)", it.time, 'type="time"')}${inp("fDur", "Drive time", it.manual ? fmtDur(it.minutes).replace(" hrs", "h").replace(" hr", "h").replace(" min", "m") : "", 'placeholder="auto"')}</div>`;
+    b += `<div class="calc" id="fCalc">${it.minutes != null ? `${it.manual ? "Manual" : "Calculated"}: ${fmtDur(it.minutes)}${it.miles ? ` · ${it.miles} mi` : ""}` : "Pick both ends and the drive time calculates itself."}</div>`;
+    b += `<p class="hint">Leave "Leave at" blank and the hub works out a "leave by" time when the drive ends at a meeting (15-min cushion). Type a drive time to override, e.g. 4:30.</p>`;
+    b += inp("fNote", "Note (optional)", it.note, 'placeholder="e.g. stop for lunch in Colby"');
+    b += travelerPicker(it.travelers, "Who's in the car");
+  } else if (type === "meeting") {
+    if (isNew) { const c = t.coops.find((x) => x.name); if (c) { it.coop = c.name; it.loc = { ref: "coop:0" }; } }
+    b += inp("fTitle", "Meeting", it.title, 'placeholder="WCE Executive Readout" required');
+    b += `<div class="grid3">${inp("fDate", "Date", it.date, 'type="date" required')}${inp("fStart", "Start", it.start, 'type="time"')}${inp("fEnd", "End", it.end, 'type="time"')}</div>`;
+    b += inp("fCoop", "Co-op we're meeting with", it.coop, 'list="coopList"');
+    b += placeSelect("fLocP", "Where", it.loc && it.loc.ref ? it.loc : { ref: "" });
+    b += `<label style="display:flex;gap:6px;align-items:center;font-size:13.5px;margin:-2px 0 10px"><input type="checkbox" id="fVirtual" ${it.virtual ? "checked" : ""}> Virtual / Teams</label>`;
+    b += inp("fNote", "Note (optional)", it.note);
+    b += travelerPicker(it.travelers, "Who's attending");
+  } else if (type === "note") {
+    b += inp("fText", "Note", it.text, 'required placeholder="e.g. Dinner with the GM at 6"');
+    b += `<div class="grid2">${inp("fDate", "Date", it.date, 'type="date" required')}${inp("fTime", "Time (optional)", it.time, 'type="time"')}</div>`;
+    b += travelerPicker(it.travelers);
+  }
+  $("#dlgBody").innerHTML = b;
+  wireDialog(it);
+  $("#itemDlg").showModal();
+}
+
+function readWho() { const el = $("#fWho"); if (!el) return []; const on = $$(".chip[aria-pressed=true]", el).map((c) => c.dataset.n); return on.length === trip().travelers.length ? [] : on; }
+function readPlace(id) {
+  const v = $("#" + id).value;
+  if (v === "custom") { const label = $("#" + id + "X").value.trim(); return label ? { ref: "custom", label } : null; }
+  if (v === "ap:") { const c = $("#" + id + "A").value.trim().toUpperCase(); return c ? { ref: `ap:${c}` } : null; }
+  return v ? { ref: v } : null;
+}
+
+function wireDialog(it) {
+  const body = $("#dlgBody");
+  const who = $("#fWho");
+  if (who) who.addEventListener("click", (e) => { const c = e.target.closest(".chip"); if (!c) return; c.setAttribute("aria-pressed", c.getAttribute("aria-pressed") !== "true"); onFlightChange(); });
+  $$("select[id$=P]", body).forEach((s) => s.addEventListener("change", () => {
+    $("#" + s.id + "X").style.display = s.value === "custom" ? "" : "none";
+    $("#" + s.id + "A").style.display = s.value === "ap:" ? "" : "none";
+    if (s.value === "ap:") $("#" + s.id + "A").focus();
+    recalcDrive();
+  }));
+  $$("input[id$=PX], input[id$=PA]", body).forEach((x) => x.addEventListener("change", recalcDrive));
+  if ($("#fDur")) $("#fDur").addEventListener("input", () => { const m = parseDur($("#fDur").value); const c = $("#fCalc"); if (m != null) { c.className = "calc"; c.textContent = `Manual: ${fmtDur(m)}`; } else if (!$("#fDur").value) recalcDrive(); });
+  if ($("#fFrom")) $("#fFrom").addEventListener("input", () => (EDITING.fromTouched = true));
+  ["fFrom", "fTo", "fDir"].forEach((id) => $("#" + id) && $("#" + id).addEventListener("input", onFlightChange));
+  function onFlightChange() {
+    if (it.type !== "flight") return;
+    const tmp = { travelers: readWho().length ? readWho() : trip().travelers, from: $("#fFrom").value, to: $("#fTo").value, dir: $("#fDir").value, arr: $("#fArr").value };
+    if (EDITING.isNew && !EDITING.fromTouched && readWho().length === 1 && homeOf(readWho()[0])) $("#fFrom").value = homeOf(readWho()[0]);
+    const d = flightDir(tmp), to = (tmp.to || "").toUpperCase(), from = (tmp.from || "").toUpperCase();
+    $("#fDirHint").textContent = !from && !to ? "" : d === "in" ? `Shows as “Land ${to || "…"}” at the landing time.` : d === "out" ? `Shows as “Leave ${from || "…"}” at the departure time.` : `Shows as “Fly ${from} → ${to}”.`;
+  }
+  onFlightChange();
+  let seq = 0;
+  async function recalcDrive() {
+    if (it.type !== "drive" || ($("#fDur").value && parseDur($("#fDur").value) != null)) return;
+    const t = trip(), c = $("#fCalc"), my = ++seq;
+    const A = resolvePlace(t, readPlace("fFromP")), B = resolvePlace(t, readPlace("fToP"));
+    if (!A || !B) { c.className = "calc"; c.textContent = "Pick both ends and the drive time calculates itself."; it.minutes = null; return; }
+    c.className = "calc"; c.textContent = "Calculating…";
+    await ensureCoords(A, A.q); await ensureCoords(B, B.q);
+    if (my !== seq) return;
+    if (A.lat == null || B.lat == null) { c.className = "calc warn"; c.textContent = `Couldn't place ${A.lat == null ? A.long : B.long} on a map — add a street address or type the drive time.`; it.minutes = null; return; }
+    const r = await routeTime(A, B);
+    if (my !== seq) return;
+    Object.assign(it, { minutes: r.minutes, miles: r.miles, est: r.est });
+    c.className = "calc"; c.textContent = `${r.est ? "Estimated (routing service unreachable)" : "Calculated"}: ${fmtDur(r.minutes)} · ${r.miles} mi`;
+  }
+  EDITING.recalc = recalcDrive;
+  if (it.type === "drive" && !it.manual && it.minutes == null) recalcDrive();
+}
+
+$("#itemForm").addEventListener("submit", async (e) => {
+  if (e.submitter && e.submitter.value === "cancel") return;
+  e.preventDefault();
+  const { it, isNew } = EDITING, t = trip(), v = (id) => ($("#" + id) ? $("#" + id).value.trim() : "");
+  it.date = v("fDate");
+  if (it.type === "flight") Object.assign(it, { travelers: readWho(), airline: v("fAirline"), number: v("fNumber"), from: v("fFrom").toUpperCase(), to: v("fTo").toUpperCase(), dep: v("fDep"), arr: v("fArr"), dir: v("fDir"), conf: v("fConf") });
+  if (it.type === "rental") Object.assign(it, { driver: v("fDriver"), company: v("fCompany"), pickup: v("fPickup").toUpperCase(), time: v("fTime"), retDate: v("fRetDate"), retTime: v("fRetTime"), conf: v("fConf") });
+  if (it.type === "hotel") {
+    const old = t.items.find((x) => x.id === it.id);
+    Object.assign(it, { name: v("fName"), city: v("fCity"), address: v("fAddress"), outDate: v("fOut"), conf: v("fConf"), travelers: readWho() });
+    if (!old || old.address !== it.address || old.city !== it.city || old.name !== it.name) { delete it.lat; delete it.lon; }
+    $("#dlgSave").disabled = true; $("#dlgSave").textContent = "Locating…";
+    if (!(await ensureCoords(it, it.address || [it.name, it.city].filter(Boolean).join(", "))).lat && it.city) await ensureCoords(it, it.city);
+  }
+  if (it.type === "drive") {
+    Object.assign(it, { from: readPlace("fFromP"), to: readPlace("fToP"), time: v("fTime"), note: v("fNote"), travelers: readWho() });
+    const m = parseDur(v("fDur"));
+    if (m != null) Object.assign(it, { minutes: m, manual: true, est: false });
+    else { it.manual = false; if (it.minutes == null) { $("#dlgSave").disabled = true; $("#dlgSave").textContent = "Calculating…"; await EDITING.recalc(); } }
+    for (const k of ["from", "to"]) if (it[k] && it[k].ref === "custom") { const p = resolvePlace(t, it[k]); await ensureCoords(p, p.q); it[k].lat = p.lat; it[k].lon = p.lon; }
+  }
+  if (it.type === "meeting") {
+    Object.assign(it, { title: v("fTitle"), start: v("fStart"), end: v("fEnd"), coop: v("fCoop"), loc: readPlace("fLocP") || { ref: "" }, virtual: $("#fVirtual").checked, note: v("fNote"), travelers: readWho() });
+    if (it.coop && !t.coops.some((c) => c.name.toLowerCase() === it.coop.toLowerCase())) {
+      const hit = COOP_DIR.find((x) => x.name.toLowerCase() === it.coop.toLowerCase());
+      const c = { name: it.coop, town: hit?.town || "", state: hit?.state || "", address: "" };
+      t.coops.push(c); if (!it.loc.ref) it.loc = { ref: `coop:${t.coops.length - 1}` };
+      ensureCoords(c, [c.town, c.state].filter(Boolean).join(", ")).then(() => { save(); });
+    }
+  }
+  if (it.type === "note") Object.assign(it, { text: v("fText"), time: v("fTime"), travelers: readWho() });
+
+  $("#dlgSave").disabled = false; $("#dlgSave").textContent = "Save";
+  if (isNew) t.items.push(it); else t.items[t.items.findIndex((x) => x.id === it.id)] = it;
+  $("#itemDlg").close(); commit();
+});
+$("#dlgDelete").onclick = () => {
+  const t = trip(), id = EDITING.it.id;
+  t.items = t.items.filter((x) => x.id !== id); $("#itemDlg").close(); commit(); toast("Deleted");
+};
+$$("[data-add]").forEach((b) => (b.onclick = () => openItem(null, b.dataset.add)));
+
+/* ================== Team dialog ================== */
+function renderTeam() {
+  $("#teamList").innerHTML = TEAM.map((p, i) => `<div class="team-row"><span>${esc(p.name)} <small>${esc(p.group || "")}${p.town ? ` · ${esc(p.town)}` : ""}</small></span>
+    <input class="f-input" data-home="${i}" value="${esc(p.home || "")}" list="apList" maxlength="3" style="text-transform:uppercase" placeholder="Home apt">
+    <button class="btn ghost sm danger" data-del="${i}">Remove</button></div>`).join("");
+}
+$("#teamBtn").onclick = () => { renderTeam(); $("#teamDlg").showModal(); };
+$("#teamList").addEventListener("input", (e) => { const i = e.target.dataset.home; if (i != null) { TEAM[+i].home = e.target.value.toUpperCase(); saveTeam(); renderPreview(); } });
+$("#teamList").addEventListener("click", (e) => { const i = e.target.dataset.del; if (i != null && confirm(`Remove ${TEAM[+i].name} from the team list?`)) { TEAM.splice(+i, 1); saveTeam(); renderTeam(); render(); } });
+$("#tmAdd").onclick = () => {
+  const name = $("#tmName").value.trim(); if (!name) return;
+  TEAM.push({ name, group: $("#tmGroup").value, home: $("#tmHome").value.trim().toUpperCase() });
+  saveTeam(); $("#tmName").value = $("#tmHome").value = ""; renderTeam(); render();
+};
+
+/* ================== Backup / share ================== */
+$("#moreBtn").onclick = () => $("#moreDlg").showModal();
+$("#exportAll").onclick = () => {
+  const blob = new Blob([JSON.stringify({ trips: DB.trips, team: TEAM }, null, 2)], { type: "application/json" });
+  const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = `nrtc-logistics-${new Date().toISOString().slice(0, 10)}.json`; a.click();
+};
+$("#importFile").onchange = async (e) => {
+  const f = e.target.files[0]; if (!f) return;
+  try {
+    const d = JSON.parse(await f.text()); const trips = d.trips || (d.items ? [d] : []);
+    let n = 0; trips.forEach((t) => { if (!t.id || DB.trips.some((x) => x.id === t.id)) t.id = uid(); DB.trips.unshift(t); n++; });
+    if (d.team && confirm("Also replace the team list with the one in this file?")) { TEAM = d.team; saveTeam(); }
+    if (n) DB.current = DB.trips[0].id; commit(); toast(`Imported ${n} trip${n === 1 ? "" : "s"}`); $("#moreDlg").close();
+  } catch (err) { toast("That file didn't look like a hub backup"); }
+  e.target.value = "";
+};
+function b64url(s) { return btoa(unescape(encodeURIComponent(s))).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, ""); }
+function unb64url(s) { s = s.replace(/-/g, "+").replace(/_/g, "/"); return decodeURIComponent(escape(atob(s))); }
+$("#shareLink").onclick = async () => {
+  const url = `${location.origin}${location.pathname}#trip=${b64url(JSON.stringify(trip()))}`;
+  toast((await copyPlain(url)) ? "Share link copied" : "Couldn't copy the link");
+};
+function importFromHash() {
+  const m = location.hash.match(/#trip=([\w-]+)/); if (!m) return;
+  try {
+    const t = JSON.parse(unb64url(m[1]));
+    const existing = DB.trips.find((x) => x.id === t.id);
+    if (existing && !confirm(`You already have "${existing.title}". Replace it with the shared version?`)) { DB.current = existing.id; }
+    else { DB.trips = DB.trips.filter((x) => x.id !== t.id); DB.trips.unshift(t); DB.current = t.id; toast(`Opened shared trip "${t.title || "Untitled"}"`); }
+    save();
+  } catch (e) { toast("That share link looks broken"); }
+  history.replaceState(null, "", location.pathname);
+}
+
+/* ================== Co-op directory (from the Gate Check sheet) ================== */
+let COOP_DIR = [];
+function parseCSV(text) {
+  const rows = []; let row = [], f = "", q = false;
+  for (let i = 0; i < text.length; i++) {
+    const ch = text[i];
+    if (q) { if (ch === '"') { if (text[i + 1] === '"') { f += '"'; i++; } else q = false; } else f += ch; }
+    else if (ch === '"') q = true; else if (ch === ",") { row.push(f); f = ""; }
+    else if (ch === "\n") { row.push(f); rows.push(row); row = []; f = ""; } else if (ch !== "\r") f += ch;
+  }
+  if (f || row.length) { row.push(f); rows.push(row); }
+  return rows;
+}
+async function loadCoopDir() {
+  try {
+    const rows = parseCSV(await (await fetch(COOPS_CSV_URL)).text());
+    const h = rows[0].map((x) => x.trim());
+    const ix = (n) => h.indexOf(n);
+    const seen = new Map();
+    rows.slice(1).forEach((r) => {
+      const name = (r[ix("Cooperative Name")] || "").trim(); if (!name || seen.has(name.toLowerCase())) return;
+      seen.set(name.toLowerCase(), { name, town: (r[ix("Cooperative HQ Town")] || "").trim(), state: (r[ix("Cooperative HQ State")] || "").trim().toUpperCase() });
+    });
+    COOP_DIR = [...seen.values()].sort((a, b) => a.name.localeCompare(b.name));
+    $("#coopList").innerHTML = COOP_DIR.map((c) => `<option value="${esc(c.name)}">${esc([c.town, c.state].filter(Boolean).join(", "))}</option>`).join("");
+  } catch (e) { /* autocomplete is a nice-to-have */ }
+}
+
+/* ================== Boot ================== */
+$("#apList").innerHTML = Object.entries(window.AP || {}).map(([c, a]) => `<option value="${c}">${esc(a[0])}, ${esc(a[1])}</option>`).join("");
+importFromHash();
+render();
+loadCoopDir();
+</script>
+</body>
+</html>

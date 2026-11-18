@@ -63,3 +63,17 @@ Any static file server works, e.g. from this folder:
 python3 -m http.server 8000
 ```
 then open `http://localhost:8000`.
+
+## NRTC Logistics Hub (`/nrtclogistics/`)
+
+Unlinked, `noindex` trip planner at `/gatecheck/nrtclogistics/` for building
+travel itineraries and pasting them into Outlook.
+
+- `nrtclogistics/index.html` — the whole app; `airports.js` — US/CA/PR airports
+  with scheduled service (OurAirports) for codes + coordinates.
+- Trips live in the browser (localStorage). Backup ▾ exports/imports JSON and
+  makes share links (`#trip=…`) that open a copy of a trip for a teammate.
+- Drive times: OpenStreetMap Nominatim (geocoding) + the public OSRM router;
+  falls back to a straight-line estimate if routing is unreachable.
+- Co-op name autocomplete reads the same published co-op CSV as the main page.
+- Team list + home airports are edited under **Team** (stored per browser).
