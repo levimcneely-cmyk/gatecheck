@@ -410,6 +410,7 @@ html.locked #gate { display: flex; min-height: 100vh; align-items: center; justi
 <div class="toast" id="toast"></div>
 
 <script src="airports.js"></script>
+<script src="parse.js"></script>
 <script>
 "use strict";
 /* ================== Config ================== */
@@ -1394,15 +1395,19 @@ async function readConfirmation(file) {
     const payload = await fileToPayload(file);
     const today = new Date(); const iso = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
     const j = await api("extract", Object.assign(payload, { today: iso }));
-    IMPORTED = itemsFromExtract(j.data || {});
-    if (!IMPORTED.length) { toast("Couldn't find a flight, hotel or rental car in that file"); return; }
+    // Gemini returns structured data; the free reader returns the file's text, which we parse here
+    const data = j.data || (j.text ? parseConfirmation(j.text, { today: iso, airports: window.AP || {}, people: TEAM.map((p) => p.name) }) : {});
+    IMPORTED = itemsFromExtract(data);
+    if (!IMPORTED.length) { toast("Couldn't spot a flight, hotel or rental car in that — try a clearer screenshot, or add it by hand"); return; }
     save(); renderRoster();
     if (IMPORTED.length === 1) { openItem(IMPORTED[0], IMPORTED[0].type, true); toast("Check the details, then Save"); return; }
     $("#importList").innerHTML = IMPORTED.map((it, i) => { const [a, b] = describeItem(it); return `<label class="imp-row"><input type="checkbox" data-i="${i}" checked>${icon(it.type)}<span>${esc(a)}<small>${esc(b)}</small></span></label>`; }).join("");
     $("#importDlg").showModal();
   } catch (e) {
     const billing = /free tier is not available|set up billing|denied access/i.test(e.message || "");
-    const msg = billing ? "Google needs billing turned on for this Gemini key (AI Studio → your project → Set up billing)."
+    const noDrive = /Drive API|Services \(\+\)|Drive is not defined/i.test(e.message || "");
+    const msg = noDrive ? "The free reader isn't switched on yet — add the Drive API under Services in the Apps Script, run authorize(), then redeploy."
+      : billing ? "Google needs billing turned on for this Gemini key (AI Studio → your project → Set up billing)."
       : { "no ai key": "Confirmation reading isn't switched on yet — the Gemini key needs to go in the Apps Script.", "ai busy": "Gemini is busy — try again in a minute." }[e.code] || (e.code === "passcode" ? "" : `Couldn't read that file${e.message ? ` (${e.message})` : ""}.`);
     if (e.code === "passcode") handleSyncError(e); else toast(msg);
   } finally { dz.classList.remove("working"); txt.innerHTML = before; $("#dropFile").value = ""; }

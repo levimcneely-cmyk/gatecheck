@@ -9,10 +9,11 @@
  *   3. Clear NEW_PASSCODE back to "" and save (so it isn't sitting in the code).
  *   4. Deploy → New deployment → Web app · Execute as: Me · Who has access: Anyone → copy the URL.
  * Changing the passcode later: type it into NEW_PASSCODE, run setPasscode(), clear it again.
- * Reading confirmations (screenshots/PDFs) with Gemini: paste a key from aistudio.google.com/apikey
- *   into GEMINI_KEY, run setAiKey() (approve the new "connect to an external service" permission),
- *   clear GEMINI_KEY again, then redeploy as a New version. Optional Script Property GEMINI_MODEL
- *   overrides the model (default: Google's current Flash model).
+ * Reading confirmations (screenshots/PDFs) — FREE, using Google Drive's built-in text recognition:
+ *   1. In the editor's left bar, Services (+) → Drive API → Add.
+ *   2. Run authorize() once and approve the permissions (Drive + Docs, used only for a temp file).
+ *   3. Deploy → Manage deployments → pencil → Version: New version → Deploy.
+ *   Optional: a Gemini key (setAiKey) is used first if it works; otherwise it falls back to the free OCR.
  * Updating this code later: Deploy → Manage deployments → edit → Version: New version (keeps the URL).
  */
 const NEW_PASSCODE = "";
@@ -42,9 +43,27 @@ function setPasscode() {
   Logger.log("Passcode set. Now clear NEW_PASSCODE back to \"\" and save.");
 }
 
+// Run once from the editor so Google asks for the Drive/Docs permissions the free reader needs.
+function authorize() {
+  const blob = Utilities.newBlob("NRTC Logistics Hub OCR check", "text/plain", "hub-ocr-check.txt");
+  const text = ocrText_(blob);
+  Logger.log("Text reader works: " + JSON.stringify(text.slice(0, 40)) + ". Now redeploy as a New version.");
+}
+
+// Google Drive turns an image or PDF into a Google Doc (with OCR); read the text, then delete the temp file.
+function ocrText_(blob) {
+  let id;
+  if (typeof Drive === "undefined") throw new Error("Add the Drive API under Services (+) in the Apps Script editor.");
+  if (Drive.Files.create) id = Drive.Files.create({ name: "hub-ocr-" + Date.now(), mimeType: MimeType.GOOGLE_DOCS }, blob, { ocrLanguage: "en" }).id;  // Drive API v3
+  else id = Drive.Files.insert({ title: "hub-ocr-" + Date.now(), mimeType: MimeType.GOOGLE_DOCS }, blob, { ocr: true, ocrLanguage: "en" }).id;  // v2
+  try { return DocumentApp.openById(id).getBody().getText(); }
+  finally { try { Drive.Files.remove(id); } catch (e) { try { DriveApp.getFileById(id).setTrashed(true); } catch (e2) {} } }
+}
+
 function setAiKey() {
   if (!GEMINI_KEY) throw new Error("Paste your Gemini API key into GEMINI_KEY first, then run this again.");
   PropertiesService.getScriptProperties().setProperty("GEMINI_KEY", GEMINI_KEY.trim());
+  PropertiesService.getScriptProperties().deleteProperty("GEMINI_OFF_UNTIL");
   // Quick test call so the permission prompt happens now and a bad key shows up right away
   const r = UrlFetchApp.fetch("https://generativelanguage.googleapis.com/v1beta/models?pageSize=1", { headers: { "x-goog-api-key": GEMINI_KEY.trim() }, muteHttpExceptions: true });
   if (r.getResponseCode() !== 200) throw new Error("Gemini rejected that key: " + r.getContentText().slice(0, 200));
@@ -62,11 +81,24 @@ const EXTRACT_PROMPT = [
   "If a year is missing, use the next occurrence on or after TODAY. Use \"\" for anything not shown. Never invent values."
 ].join("\n");
 
+// Try Gemini (only if a working key is set); otherwise return the file's text for the hub to read.
 function extract_(req) {
-  const props = PropertiesService.getScriptProperties();
-  const key = props.getProperty("GEMINI_KEY");
-  if (!key) return { ok: false, error: "no ai key" };
   if (!req.data || !req.mime) return { ok: false, error: "no file" };
+  const props = PropertiesService.getScriptProperties();
+  const off = Number(props.getProperty("GEMINI_OFF_UNTIL") || 0);
+  if (props.getProperty("GEMINI_KEY") && Date.now() > off) {
+    const ai = gemini_(req, props);
+    if (ai.ok) return ai;
+    if (/free tier is not available|billing|denied access|403/i.test(ai.error || "")) props.setProperty("GEMINI_OFF_UNTIL", String(Date.now() + 7 * 864e5)); // stop retrying for a week
+  }
+  try {
+    const text = ocrText_(Utilities.newBlob(Utilities.base64Decode(req.data), req.mime, "hub-upload"));
+    return { ok: true, text: text };
+  } catch (err) { return { ok: false, error: "reader: " + err.message }; }
+}
+
+function gemini_(req, props) {
+  const key = props.getProperty("GEMINI_KEY");
   const body = {
     contents: [{ parts: [
       { text: EXTRACT_PROMPT.replace("TODAY", "today (" + (req.today || Utilities.formatDate(new Date(), "America/New_York", "yyyy-MM-dd")) + ")") },
@@ -115,7 +147,7 @@ function doPost(e) {
   const sh = SpreadsheetApp.getActive().getSheetByName(SHEET);
   if (!sh && req.action !== "extract") return json_({ ok: false, error: "run setup() first" });
 
-  if (req.action === "ping") return json_({ ok: true, ai: !!props.getProperty("GEMINI_KEY") });
+  if (req.action === "ping") return json_({ ok: true });
   if (req.action === "extract") return json_(extract_(req));
 
   if (req.action === "list") {
