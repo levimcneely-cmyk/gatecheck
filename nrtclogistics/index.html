@@ -110,6 +110,7 @@ label.f { display: block; font-size: 12.5px; font-weight: 600; color: var(--mute
 .it .t { font-family: var(--font-display); font-size: 12.5px; color: var(--muted); }
 .it .w { font-size: 14px; min-width: 0; }
 .it .w .who { font-weight: 700; }
+.it .w .sep { margin: 0 .45em; color: var(--muted); }
 .it .w .d { color: var(--muted); font-size: 12.5px; }
 .it .acts { display: flex; gap: 2px; opacity: .55; }
 .it:hover .acts { opacity: 1; }
@@ -244,6 +245,8 @@ dialog::backdrop { background: rgba(16, 24, 34, .35); }
   <div class="dlg-b">
     <p class="hint" style="margin:0 0 10px">Home airports pre-fill the "from" on a new flight and tell the hub which flights are heading out vs. heading home.</p>
     <div id="teamList"></div>
+    <div class="group-label">RBM territories <span style="text-transform:none;letter-spacing:0;font-weight:400">— state codes; a co-op's HQ state picks its RBM</span></div>
+    <div id="terrList"></div>
     <div class="group-label">Add someone</div>
     <div class="grid3">
       <input class="f-input" id="tmName" placeholder="Full name">
@@ -279,6 +282,17 @@ const TEAM_KEY = "nrtclog:team";
 // Same published co-op sheet Gate Check's map uses — feeds the co-op name autocomplete.
 const COOPS_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vR54CnrLNkh_UuMJ1Hetsu3DhQ0E4vm7B48yazB-ODIQNcV7zXq42U0CWQ5RjaUSXarnB8L4VSPYl81/pub?gid=316726175&single=true&output=csv";
 
+// RBM territories by co-op HQ state (from the RBM map; the old East region is unassigned until it's split out).
+// Editable under Team → RBM territories; each co-op can also override its RBM.
+const TERR_KEY = "nrtclog:terr";
+const DEFAULT_TERR = {
+  "Chris Bradley": "AK HI WA OR CA NV UT AZ CO NM WY",
+  "Michael Jablonski": "ID MT ND SD NE",
+  "Steve Hanson": "MN IA KS MO",
+  "Mark Davis": "WI MI IL IN OH KY",
+  "Matt Timmons": "OK TX AR LA",
+  "Rodney Pugh": "MS AL GA FL",
+};
 const DEFAULT_TEAM = [
   { name: "Mark Davis", group: "RBMS", home: "" },
   { name: "Steve Hanson", group: "RBMS", home: "" },
@@ -353,6 +367,11 @@ function apInfo(code) { const a = window.AP && AP[(code || "").toUpperCase()]; r
 /* ================== Storage ================== */
 let DB = load();
 let TEAM = loadTeam();
+let TERR = (() => { try { const t = JSON.parse(localStorage.getItem(TERR_KEY)); if (t && typeof t === "object") return t; } catch (e) {} return { ...DEFAULT_TERR }; })();
+function saveTerr() { localStorage.setItem(TERR_KEY, JSON.stringify(TERR)); }
+function rbmForState(st) { st = (st || "").trim().toUpperCase(); if (!st) return ""; return Object.keys(TERR).find((n) => (TERR[n] || "").toUpperCase().split(/[\s,]+/).includes(st)) || ""; }
+function coopRBM(c) { return c.rbmManual ? (c.rbm || "") : rbmForState(c.state); }
+const rbmNames = () => [...new Set([...TEAM.filter((p) => p.group === "RBMS").map((p) => p.name), ...Object.keys(TERR)])];
 function load() {
   try { const d = JSON.parse(localStorage.getItem(STORE_KEY)); if (d && d.trips) return d; } catch (e) {}
   const t = sampleTrip(); return { trips: [t], current: t.id, opts: { conf: true, addr: true, miles: false } };
@@ -583,7 +602,9 @@ function emailHTML(t, opts) {
   const meta = [];
   const range = tripRange(t); if (range) meta.push(esc(range));
   if (coops.length) meta.push(coops.map((c) => `${esc(c.name)}${c.town ? ` (${esc([c.town, c.state].filter(Boolean).join(", "))})` : ""}`).join("; "));
+  const rbms = [...new Set(coops.map(coopRBM).filter(Boolean))];
   if (meta.length) h += `<p style="${F}margin:0 0 2px;color:#444;">${meta.join(" &nbsp;|&nbsp; ")}</p>`;
+  if (rbms.length) h += `<p style="${F}margin:0 0 2px;color:#444;"><b>RBM:</b> ${rbms.map(esc).join(", ")}</p>`;
   if (t.travelers.length) h += `<p style="${F}margin:0 0 2px;color:#444;"><b>Travelers:</b> ${t.travelers.map(esc).join(", ")}</p>`;
   if (t.notes) h += `<p style="${F}margin:8px 0 0;">${esc(t.notes).replace(/\n/g, "<br>")}</p>`;
   if (!days.length) h += `<p style="${F}color:#888;margin:14px 0 0;">Nothing on the itinerary yet.</p>`;
@@ -607,6 +628,8 @@ function emailText(t, opts) {
   const range = tripRange(t), coops = t.coops.filter((c) => c.name);
   const meta = [range, coops.map((c) => `${c.name}${c.town ? ` (${[c.town, c.state].filter(Boolean).join(", ")})` : ""}`).join("; ")].filter(Boolean);
   if (meta.length) out.push(meta.join(" | "));
+  const rbms = [...new Set(coops.map(coopRBM).filter(Boolean))];
+  if (rbms.length) out.push(`RBM: ${rbms.join(", ")}`);
   if (t.travelers.length) out.push(`Travelers: ${t.travelers.join(", ")}`);
   if (t.notes) out.push("", t.notes);
   groupDays(buildRows(t, opts)).forEach((d) => {
@@ -640,7 +663,14 @@ function renderCoops() {
         <div><label class="f">State</label><input class="f-input" data-k="state" value="${esc(c.state)}" maxlength="2" style="text-transform:uppercase"></div>
         <button class="btn ghost sm danger" data-rm title="Remove">✕</button>
       </div>
-      <div style="margin-top:6px"><input class="f-input" data-k="address" value="${esc(c.address)}" placeholder="HQ street address (optional — sharper drive times)"></div>
+      <div style="margin-top:6px;display:grid;grid-template-columns:minmax(0,1.6fr) minmax(0,1fr);gap:8px">
+        <input class="f-input" data-k="address" value="${esc(c.address)}" placeholder="HQ street address (optional — sharper drive times)">
+        <select class="f-input" data-k="rbm" title="RBM for this co-op">
+          <option value="__auto" ${c.rbmManual ? "" : "selected"}>RBM: ${esc(rbmForState(c.state) || "— (pick one)")}${c.state ? " · auto" : ""}</option>
+          ${rbmNames().map((n) => `<option value="${esc(n)}" ${c.rbmManual && c.rbm === n ? "selected" : ""}>RBM: ${esc(n)}</option>`).join("")}
+          <option value="" ${c.rbmManual && !c.rbm ? "selected" : ""}>No RBM</option>
+        </select>
+      </div>
     </div>`).join("") || `<p class="hint" style="margin:0 0 8px">No co-op yet.</p>`;
 }
 function renderRoster() {
@@ -663,7 +693,7 @@ function renderItems() {
       <div class="it">
         <span class="ico">${icon(r.type)}</span>
         <span class="t">${esc(r.time)}</span>
-        <span class="w">${r.who ? `<span class="who">${esc(r.who)}</span> · ` : ""}${esc(r.what)}${r.detail ? `<div class="d">${esc(r.detail)}</div>` : ""}</span>
+        <span class="w">${r.who ? `<span class="who">${esc(r.who)}</span><span class="sep">·</span>` : ""}${esc(r.what)}${r.detail ? `<div class="d">${esc(r.detail)}</div>` : ""}</span>
         <span class="acts">
           <button class="btn ghost sm" data-move="-1" data-id="${r.item.id}" title="Move earlier (untimed items)">↑</button>
           <button class="btn ghost sm" data-move="1" data-id="${r.item.id}" title="Move later (untimed items)">↓</button>
@@ -701,6 +731,7 @@ $("#addCoop").onclick = () => { trip().coops.push({ name: "", town: "", state: "
 $("#coops").addEventListener("input", (e) => {
   const row = e.target.closest(".coop-row"); if (!row) return;
   const c = trip().coops[+row.dataset.i], k = e.target.dataset.k;
+  if (k === "rbm") { if (e.target.value === "__auto") { c.rbmManual = false; delete c.rbm; } else { c.rbmManual = true; c.rbm = e.target.value; } save(); renderPreview(); return; }
   c[k] = k === "state" ? e.target.value.toUpperCase() : e.target.value;
   if (k === "name") { const hit = COOP_DIR.find((x) => x.name.toLowerCase() === c.name.toLowerCase()); if (hit) { c.town = hit.town; c.state = hit.state; $("[data-k=town]", row).value = hit.town; $("[data-k=state]", row).value = hit.state; } }
   if (k !== "name") { delete c.lat; delete c.lon; }
@@ -945,7 +976,14 @@ function renderTeam() {
     <input class="f-input" data-home="${i}" value="${esc(p.home || "")}" list="apList" maxlength="3" style="text-transform:uppercase" placeholder="Home apt">
     <button class="btn ghost sm danger" data-del="${i}">Remove</button></div>`).join("");
 }
-$("#teamBtn").onclick = () => { renderTeam(); $("#teamDlg").showModal(); };
+function renderTerr() {
+  $("#terrList").innerHTML = rbmNames().map((n) => `<div class="team-row" style="grid-template-columns:150px 1fr"><span>${esc(n)}</span>
+    <input class="f-input" data-terr="${esc(n)}" value="${esc(TERR[n] || "")}" placeholder="e.g. KS MO IA" style="text-transform:uppercase"></div>`).join("") +
+    `<p class="hint">Unassigned right now: ${esc(ALL_STATES.filter((st) => !rbmForState(st)).join(" ") || "none")}</p>`;
+}
+const ALL_STATES = "AL AK AZ AR CA CO CT DE FL GA HI ID IL IN IA KS KY LA ME MD MA MI MN MS MO MT NE NV NH NJ NM NY NC ND OH OK OR PA RI SC SD TN TX UT VT VA WA WV WI WY".split(" ");
+$("#terrList").addEventListener("change", (e) => { const n = e.target.dataset.terr; if (!n) return; TERR[n] = e.target.value.toUpperCase().replace(/[^A-Z]+/g, " ").trim(); saveTerr(); renderTerr(); render(); });
+$("#teamBtn").onclick = () => { renderTeam(); renderTerr(); $("#teamDlg").showModal(); };
 $("#teamList").addEventListener("input", (e) => { const i = e.target.dataset.home; if (i != null) { TEAM[+i].home = e.target.value.toUpperCase(); saveTeam(); renderPreview(); } });
 $("#teamList").addEventListener("click", (e) => { const i = e.target.dataset.del; if (i != null && confirm(`Remove ${TEAM[+i].name} from the team list?`)) { TEAM.splice(+i, 1); saveTeam(); renderTeam(); render(); } });
 $("#tmAdd").onclick = () => {
@@ -957,7 +995,7 @@ $("#tmAdd").onclick = () => {
 /* ================== Backup / share ================== */
 $("#moreBtn").onclick = () => $("#moreDlg").showModal();
 $("#exportAll").onclick = () => {
-  const blob = new Blob([JSON.stringify({ trips: DB.trips, team: TEAM }, null, 2)], { type: "application/json" });
+  const blob = new Blob([JSON.stringify({ trips: DB.trips, team: TEAM, territories: TERR }, null, 2)], { type: "application/json" });
   const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = `nrtc-logistics-${new Date().toISOString().slice(0, 10)}.json`; a.click();
 };
 $("#importFile").onchange = async (e) => {
@@ -965,7 +1003,7 @@ $("#importFile").onchange = async (e) => {
   try {
     const d = JSON.parse(await f.text()); const trips = d.trips || (d.items ? [d] : []);
     let n = 0; trips.forEach((t) => { if (!t.id || DB.trips.some((x) => x.id === t.id)) t.id = uid(); DB.trips.unshift(t); n++; });
-    if (d.team && confirm("Also replace the team list with the one in this file?")) { TEAM = d.team; saveTeam(); }
+    if (d.team && confirm("Also replace the team list (and RBM territories) with the ones in this file?")) { TEAM = d.team; saveTeam(); if (d.territories) { TERR = d.territories; saveTerr(); } }
     if (n) DB.current = DB.trips[0].id; commit(); toast(`Imported ${n} trip${n === 1 ? "" : "s"}`); $("#moreDlg").close();
   } catch (err) { toast("That file didn't look like a hub backup"); }
   e.target.value = "";
