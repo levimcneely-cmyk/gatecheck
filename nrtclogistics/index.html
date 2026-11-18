@@ -71,6 +71,7 @@ select.trip-select { border: 1px solid var(--line-2); border-radius: 8px; paddin
 
 label.f { display: block; font-size: 12.5px; font-weight: 600; color: var(--muted); margin: 0 0 4px; }
 .in-text, .f-input { width: 100%; border: 1px solid var(--line-2); border-radius: 8px; padding: 8px 10px; background: #fff; font-size: 14px; }
+input.f-input, select.f-input { height: 38px; }
 .in-text:focus, .f-input:focus, select:focus, textarea:focus { outline: 2px solid var(--aqua); outline-offset: 0; border-color: var(--aqua); }
 .trip-title { font-size: 20px; font-weight: 700; border: 1px solid transparent; padding: 4px 8px; margin-left: -8px; width: calc(100% + 8px); }
 .trip-title:hover { border-color: var(--line); }
@@ -136,8 +137,8 @@ dialog::backdrop { background: rgba(16, 24, 34, .35); }
 .dlg-h h3 { margin: 0; font-size: 17px; }
 .dlg-b { padding: 16px 18px 6px; }
 .dlg-f { display: flex; justify-content: space-between; gap: 8px; padding: 12px 18px; border-top: 1px solid var(--line); position: sticky; bottom: 0; background: #fff; }
-.seg { display: inline-flex; border: 1px solid var(--line-2); border-radius: 7px; overflow: hidden; margin-bottom: 4px; }
-.seg button { border: 0; background: #fff; padding: 2px 9px; font-size: 12px; font-weight: 600; color: var(--muted); cursor: pointer; }
+.seg { display: inline-flex; height: 20px; border: 1px solid var(--line-2); border-radius: 6px; overflow: hidden; margin-bottom: 4px; vertical-align: bottom; }
+.seg button { border: 0; background: #fff; padding: 0 8px; font-size: 11.5px; line-height: 18px; font-weight: 600; color: var(--muted); cursor: pointer; }
 .seg button[aria-pressed="true"] { background: var(--breeze); color: #fff; }
 .calc { font-size: 13px; padding: 8px 10px; border-radius: 8px; background: #EEF8F8; color: var(--teal); margin-top: 2px; }
 .calc.warn { background: #FCEBEC; color: var(--coral); }
@@ -1054,7 +1055,7 @@ function openItem(it, type) {
       if (hotelToday) it.to = { ref: `hotel:${hotelToday.id}` }; else if (ps.find((p) => p.ref.startsWith("coop:"))) it.to = { ref: "coop:0" };
     }
     b += `<div class="grid2">${placeSelect("fFromP", "From", it.from)}${placeSelect("fToP", "To", it.to)}</div>`;
-    b += `<div class="grid3">${inp("fDate", "Date", it.date, 'type="date" required')}<div class="field"><div class="seg" id="fMode" role="group" aria-label="Time type">
+    b += `<div class="grid3" style="align-items:end">${inp("fDate", "Date", it.date, 'type="date" required')}<div class="field"><div class="seg" id="fMode" role="group" aria-label="Time type">
         <button type="button" data-mode="arrive" aria-pressed="${!(it.time && !it.arriveBy)}">Arrive by</button><button type="button" data-mode="leave" aria-pressed="${!!(it.time && !it.arriveBy)}">Leave at</button></div>
         <input class="f-input" id="fArrive" type="time" value="${esc(it.arriveBy || it.time || "")}" aria-label="Time"></div>${inp("fDur", "Drive time", it.manual ? fmtDur(it.minutes).replace(" hrs", "h").replace(" hr", "h").replace(" min", "m") : "", 'placeholder="auto"')}</div>`;
     b += `<div class="calc" id="fCalc">${it.minutes != null ? `${it.manual ? "Manual" : "Calculated"}: ${fmtDur(it.minutes)}${it.miles ? ` · ${it.miles} mi` : ""}` : "Pick both ends and the drive time calculates itself."}</div>`;
