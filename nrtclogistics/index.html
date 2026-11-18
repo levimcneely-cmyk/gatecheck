@@ -1401,7 +1401,9 @@ async function readConfirmation(file) {
     $("#importList").innerHTML = IMPORTED.map((it, i) => { const [a, b] = describeItem(it); return `<label class="imp-row"><input type="checkbox" data-i="${i}" checked>${icon(it.type)}<span>${esc(a)}<small>${esc(b)}</small></span></label>`; }).join("");
     $("#importDlg").showModal();
   } catch (e) {
-    const msg = { "no ai key": "Confirmation reading isn't switched on yet — the Gemini key needs to go in the Apps Script.", "ai busy": "Gemini is busy — try again in a minute." }[e.code] || (e.code === "passcode" ? "" : `Couldn't read that file${e.message ? ` (${e.message})` : ""}.`);
+    const billing = /free tier is not available|set up billing|denied access/i.test(e.message || "");
+    const msg = billing ? "Google needs billing turned on for this Gemini key (AI Studio → your project → Set up billing)."
+      : { "no ai key": "Confirmation reading isn't switched on yet — the Gemini key needs to go in the Apps Script.", "ai busy": "Gemini is busy — try again in a minute." }[e.code] || (e.code === "passcode" ? "" : `Couldn't read that file${e.message ? ` (${e.message})` : ""}.`);
     if (e.code === "passcode") handleSyncError(e); else toast(msg);
   } finally { dz.classList.remove("working"); txt.innerHTML = before; $("#dropFile").value = ""; }
 }
